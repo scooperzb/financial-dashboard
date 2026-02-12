@@ -1,0 +1,13 @@
+# ──────────────────────────────────────────────────────
+# Financial Portfolio Dashboard — Dependencies
+# ──────────────────────────────────────────────────────
+# Install:   pip install -r requirements.txt
+# Run:       streamlit run app.py
+# ──────────────────────────────────────────────────────
+
+streamlit>=1.30.0
+yfinance>=0.2.36
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.18.0
+textblob>=0.18.0
