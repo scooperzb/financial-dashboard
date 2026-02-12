@@ -34,10 +34,14 @@ from textblob import TextBlob
 # ──────────────────────────────────────────────────────────────────────────────
 
 # TextBlob requires NLTK corpora — download on first run (needed for Streamlit Cloud)
-try:
-    nltk.data.find("tokenizers/punkt_tab")
-except LookupError:
-    nltk.download("punkt_tab", quiet=True)
+for corpus in ["punkt_tab", "punkt"]:
+    try:
+        nltk.data.find(f"tokenizers/{corpus}")
+    except LookupError:
+        try:
+            nltk.download(corpus, quiet=True)
+        except Exception:
+            pass
 
 HOLDINGS_FILE = Path(__file__).parent / "holdings.json"
 FALLBACK_FX_RATE = 1.36
