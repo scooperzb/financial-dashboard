@@ -327,16 +327,19 @@ def fetch_news_for_ticker(ticker: str, company_name: str) -> list[dict]:
     keywords = _build_relevance_keywords(ticker, company_name)
     items = []
     for article in raw_news:
+        # Handle both yfinance <1.0 (flat keys) and >=1.0 (nested "content")
         content = article.get("content", article)
-        title = content.get("title", "")
-        summary = content.get("summary", "")
+        title = content.get("title", article.get("title", ""))
+        summary = content.get("summary", article.get("summary", ""))
         if not _is_relevant(title, summary, keywords):
             continue
         click_through = content.get("clickThroughUrl") or {}
         canonical = content.get("canonicalUrl") or {}
-        link = click_through.get("url") or canonical.get("url", "")
+        link = (click_through.get("url")
+                or canonical.get("url")
+                or article.get("link", ""))
         provider = content.get("provider") or {}
-        publisher = provider.get("displayName", "Unknown")
+        publisher = provider.get("displayName", article.get("publisher", "Unknown"))
         polarity = TextBlob(title).sentiment.polarity
         if polarity > 0.05:
             sentiment = "Bullish"
@@ -682,4 +685,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        st.error(f"Dashboard error: {e}")
+        st.code(traceback.format_exc())
