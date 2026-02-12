@@ -22,6 +22,7 @@ import logging
 import re
 from pathlib import Path
 
+import nltk
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -31,6 +32,12 @@ from textblob import TextBlob
 # ──────────────────────────────────────────────────────────────────────────────
 # CONFIG
 # ──────────────────────────────────────────────────────────────────────────────
+
+# TextBlob requires NLTK corpora — download on first run (needed for Streamlit Cloud)
+try:
+    nltk.data.find("tokenizers/punkt_tab")
+except LookupError:
+    nltk.download("punkt_tab", quiet=True)
 
 HOLDINGS_FILE = Path(__file__).parent / "holdings.json"
 FALLBACK_FX_RATE = 1.36
