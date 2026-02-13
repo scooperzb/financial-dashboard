@@ -509,16 +509,9 @@ def main():
 
     # ── Build the master table ──
     table = build_table(holdings, prices, fx_rate)
-    total_value = table["Value (CAD)"].sum()
 
-    # Daily P&L
+    # Count gainers / losers
     valid = table.dropna(subset=["Day Change %"])
-    if not valid.empty and total_value > 0:
-        daily_pct = (valid["Value (CAD)"] * valid["Day Change %"]).sum() / total_value
-        daily_dollar = total_value * (daily_pct / 100)
-    else:
-        daily_pct, daily_dollar = 0.0, 0.0
-
     gainers = len(valid[valid["Day Change %"] > 0])
     losers = len(valid[valid["Day Change %"] < 0])
 
@@ -535,21 +528,9 @@ def main():
         unsafe_allow_html=True,
     )
 
-    delta_class = "positive" if daily_pct >= 0 else "negative"
-    delta_arrow = "▲" if daily_pct >= 0 else "▼"
-
     st.markdown(
         f"""
         <div class="metric-row">
-            <div class="metric-card">
-                <div class="label">Portfolio Value</div>
-                <div class="value">${total_value:,.0f}</div>
-            </div>
-            <div class="metric-card">
-                <div class="label">Today's P&L</div>
-                <div class="value">${daily_dollar:+,.0f}</div>
-                <div class="delta {delta_class}">{delta_arrow} {abs(daily_pct):.2f}%</div>
-            </div>
             <div class="metric-card">
                 <div class="label">Gainers / Losers</div>
                 <div class="value" style="font-size:1.4rem;">
