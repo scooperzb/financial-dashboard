@@ -1,0 +1,105 @@
+{
+  "_meta": {
+    "last_updated": "2026-02-10",
+    "source": "Block Trade Excel Export",
+    "period_start": "2026-02-01",
+    "period_end": "2026-02-28",
+    "notes": "February 2026 block trade activity — All SAC Clifford Borden"
+  },
+  "trades": [
+    {
+      "id": "BT-2026-0001",
+      "date": "2026-02-04",
+      "type": "sell",
+      "symbol": "FC.TO",
+      "name": "Firm Capital Mortgage Investment",
+      "shares": 41257,
+      "price": 12.10,
+      "currency": "CAD",
+      "market_value": 499210,
+      "yield_pct": null,
+      "notes": "PM exiting position",
+      "switch_id": null
+    },
+    {
+      "id": "BT-2026-0002",
+      "date": "2026-02-04",
+      "type": "sell",
+      "symbol": "NVO",
+      "name": "Novo Nordisk A/S ADR",
+      "shares": 17131,
+      "price": 47.3521,
+      "currency": "USD",
+      "market_value": 811189,
+      "yield_pct": null,
+      "notes": "PM exiting position on negative news",
+      "switch_id": null
+    },
+    {
+      "id": "BT-2026-0003",
+      "date": "2026-02-09",
+      "type": "buy",
+      "symbol": "VIU.TO",
+      "name": "Vanguard FTSE Developed All Cap ex NA Index ETF",
+      "shares": 17274,
+      "price": 46.5514,
+      "currency": "CAD",
+      "market_value": 804129,
+      "yield_pct": null,
+      "notes": "Part of Switch — PM Exiting Fidelity International for taxable accounts",
+      "switch_id": "SW-2026-001"
+    },
+    {
+      "id": "BT-2026-0004",
+      "date": "2026-02-09",
+      "type": "sell",
+      "symbol": "FID670",
+      "name": "Fidelity International High Quality Index ETF (FID670)",
+      "shares": null,
+      "price": null,
+      "currency": "CAD",
+      "market_value": null,
+      "yield_pct": null,
+      "notes": "Sell side of Fidelity International switch",
+      "switch_id": "SW-2026-001"
+    },
+    {
+      "id": "BT-2026-0005",
+      "date": "2026-02-10",
+      "type": "buy",
+      "symbol": "IDIV-B.TO",
+      "name": "Manulife Smart International Dividend ETF",
+      "shares": 75558,
+      "price": 19.7299,
+      "currency": "CAD",
+      "market_value": 1490752,
+      "yield_pct": null,
+      "notes": "Part of Switch — PM Exiting Fidelity International for taxable accounts",
+      "switch_id": "SW-2026-001"
+    },
+    {
+      "id": "BT-2026-0006",
+      "date": "2026-02-10",
+      "type": "sell",
+      "symbol": "FID2210",
+      "name": "Fidelity International ETF (FID2210)",
+      "shares": null,
+      "price": null,
+      "currency": "CAD",
+      "market_value": null,
+      "yield_pct": null,
+      "notes": "Sell side of Fidelity International switch",
+      "switch_id": "SW-2026-001"
+    }
+  ],
+  "switches": [
+    {
+      "switch_id": "SW-2026-001",
+      "label": "Fidelity International Exit",
+      "rationale": "PM Exiting Fidelity International for taxable accounts",
+      "sell_trade_ids": ["BT-2026-0004", "BT-2026-0006"],
+      "buy_trade_ids": ["BT-2026-0003", "BT-2026-0005"],
+      "status": "completed"
+    }
+  ]
+}
