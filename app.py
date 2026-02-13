@@ -88,21 +88,85 @@ header {visibility: hidden;}
 
 /* ── Dashboard title bar ── */
 .title-bar {
-    display: flex;
-    align-items: baseline;
-    gap: 1rem;
     margin-bottom: 0.25rem;
 }
 .title-bar h1 {
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 700;
-    margin: 0;
+    margin: 0 0 0.5rem 0;
     color: #f1f5f9;
 }
-.title-bar .subtitle {
-    font-size: 0.85rem;
+.title-bar .title-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+.title-bar .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #e2e8f0;
+}
+.title-bar .meta-chip .meta-icon {
+    font-size: 1rem;
+}
+.title-bar .meta-chip .meta-label {
     color: #64748b;
+    font-size: 0.75rem;
     font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 0.3rem;
+}
+.title-bar .market-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #64748b;
+}
+.title-bar .market-status .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.title-bar .market-status .dot.open { background: #34d399; box-shadow: 0 0 6px #34d39966; }
+.title-bar .market-status .dot.closed { background: #f87171; }
+
+/* ── Top/Bottom movers strip ── */
+.movers-strip {
+    display: flex;
+    gap: 0.6rem;
+    margin: 1rem 0 0.5rem 0;
+    flex-wrap: wrap;
+}
+.mover-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid;
+}
+.mover-chip.gainer {
+    background: #34d39912;
+    color: #34d399;
+    border-color: #34d39933;
+}
+.mover-chip.loser {
+    background: #f8717112;
+    color: #f87171;
+    border-color: #f8717133;
 }
 
 /* ── Metric cards ── */
@@ -538,29 +602,62 @@ def main():
     # HEADER
     # ══════════════════════════════════════════════════════════════════════
 
-    st.markdown(
-        f'<div class="title-bar">'
-        f'<h1>Portfolio Holdings</h1>'
-        f'<span class="subtitle">{meta.get("report_date", "—")} &middot; '
-        f'{meta.get("total_positions", len(holdings))} positions</span>'
-        f'</div>',
-        unsafe_allow_html=True,
+    # Determine market status (NYSE hours: 9:30–16:00 ET, Mon–Fri)
+    from datetime import datetime
+    import pytz
+    now_et = datetime.now(pytz.timezone("US/Eastern"))
+    is_weekday = now_et.weekday() < 5
+    market_open_time = now_et.replace(hour=9, minute=30, second=0)
+    market_close_time = now_et.replace(hour=16, minute=0, second=0)
+    market_is_open = is_weekday and market_open_time <= now_et <= market_close_time
+    market_dot = "open" if market_is_open else "closed"
+    market_label = "Market Open" if market_is_open else "Market Closed"
+
+    # Top 3 gainers & losers for mover chips
+    sorted_up = valid.nlargest(3, "Day Change %")
+    sorted_down = valid.nsmallest(3, "Day Change %")
+
+    gainer_chips = "".join(
+        f'<span class="mover-chip gainer">{r["Ticker"]} ▲{r["Day Change %"]:.2f}%</span>'
+        for _, r in sorted_up.iterrows() if r["Day Change %"] > 0
     )
+    loser_chips = "".join(
+        f'<span class="mover-chip loser">{r["Ticker"]} ▼{abs(r["Day Change %"]):.2f}%</span>'
+        for _, r in sorted_down.iterrows() if r["Day Change %"] < 0
+    )
+
+    report_date = meta.get("report_date", "—")
+    num_positions = meta.get("total_positions", len(holdings))
+    refresh_time = now_et.strftime("%I:%M %p ET")
 
     st.markdown(
         f"""
-        <div class="metric-row">
-            <div class="metric-card">
-                <div class="label">Gainers / Losers</div>
-                <div class="value" style="font-size:1.4rem;">
+        <div class="title-bar">
+            <h1>Portfolio Holdings</h1>
+            <div class="title-meta">
+                <span class="meta-chip">
+                    <span class="meta-label">As of</span>
+                    <span class="meta-icon">📅</span> {report_date}
+                </span>
+                <span class="meta-chip">
+                    <span class="meta-label">Positions</span>
+                    <span class="meta-icon">📊</span> {num_positions}
+                </span>
+                <span class="meta-chip">
+                    <span class="meta-label">FX</span>
+                    USD/CAD {fx_rate:.4f}
+                </span>
+                <span class="meta-chip">
                     <span style="color:#34d399;">{gainers} ▲</span>
                     &nbsp;/&nbsp;
                     <span style="color:#f87171;">{losers} ▼</span>
-                </div>
+                </span>
+                <span class="market-status">
+                    <span class="dot {market_dot}"></span> {market_label}
+                </span>
             </div>
-            <div class="metric-card">
-                <div class="label">USD / CAD</div>
-                <div class="value" style="font-size:1.4rem;">{fx_rate:.4f}</div>
+            <div class="movers-strip">
+                {gainer_chips}{loser_chips}
             </div>
         </div>
         """,
@@ -673,10 +770,10 @@ def main():
     # ── Footer ──
     st.markdown(
         f'<div class="footer-text">'
+        f'Last refreshed: {refresh_time} &middot; '
         f'Report: {meta.get("report_date", "—")} &middot; '
         f'Live prices via Yahoo Finance &middot; '
-        f'Sentiment via TextBlob &middot; '
-        f'Built with Streamlit + Plotly'
+        f'Sentiment via TextBlob'
         f'</div>',
         unsafe_allow_html=True,
     )
