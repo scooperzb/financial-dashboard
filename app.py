@@ -434,24 +434,43 @@ SENTIMENT_STYLE = {
 
 
 def make_donut(labels, values, title, colors=None):
+    total = sum(values)
+    # Build custom legend labels: "Label  XX.X%"
+    pcts = [(v / total * 100) if total else 0 for v in values]
+    legend_labels = [f"{lbl}  {p:.1f}%" for lbl, p in zip(labels, pcts)]
+
     fig = go.Figure(go.Pie(
-        labels=labels, values=values, hole=0.6,
-        marker=dict(colors=colors, line=dict(color="#0f172a", width=2)) if colors
-               else dict(line=dict(color="#0f172a", width=2)),
-        textinfo="label+percent", textposition="outside",
-        textfont=dict(size=11, color="#94a3b8"),
-        hovertemplate="<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>",
+        labels=legend_labels, values=values, hole=0.55,
+        marker=dict(
+            colors=colors,
+            line=dict(color="#0f172a", width=2),
+        ) if colors else dict(line=dict(color="#0f172a", width=2)),
+        textinfo="none",
+        hovertemplate="<b>%{label}</b><br>$%{value:,.0f}<extra></extra>",
         sort=True, direction="clockwise",
     ))
     fig.update_layout(
-        title=dict(text=title, font=dict(size=14, color="#94a3b8"),
-                   x=0.5, xanchor="center"),
+        title=dict(
+            text=title, font=dict(size=13, color="#94a3b8", family="Inter"),
+            x=0.5, xanchor="center", y=0.97,
+        ),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        height=380, margin=dict(l=20, r=20, t=50, b=20),
-        showlegend=False,
+        height=520, margin=dict(l=10, r=10, t=40, b=10),
+        showlegend=True,
+        legend=dict(
+            font=dict(size=12, color="#cbd5e1", family="Inter"),
+            orientation="h",
+            yanchor="top", y=-0.02,
+            xanchor="center", x=0.5,
+            itemwidth=30,
+            bgcolor="rgba(0,0,0,0)",
+            borderwidth=0,
+            traceorder="normal",
+        ),
         annotations=[dict(
-            text=f"<b>${sum(values)/1e6:.0f}M</b>",
-            x=0.5, y=0.5, font=dict(size=18, color="#e2e8f0"), showarrow=False,
+            text=f"<b>${total/1e6:.0f}M</b>",
+            x=0.5, y=0.5, font=dict(size=20, color="#e2e8f0", family="Inter"),
+            showarrow=False,
         )],
     )
     return fig
@@ -584,11 +603,13 @@ def main():
     st.markdown('<div class="section-header">Portfolio Composition</div>',
                 unsafe_allow_html=True)
 
-    chart_left, chart_right = st.columns(2)
+    merged = table.copy()
+    merged["Currency"] = holdings["currency"].values
+    merged["Sector"] = holdings["sector"].values
+
+    chart_left, chart_right = st.columns([2, 3], gap="large")
 
     with chart_left:
-        merged = table.copy()
-        merged["Currency"] = holdings["currency"].values
         curr_agg = merged.groupby("Currency")["Value (CAD)"].sum()
         fig_curr = make_donut(
             curr_agg.index.tolist(), curr_agg.values.tolist(),
@@ -597,7 +618,6 @@ def main():
         st.plotly_chart(fig_curr, use_container_width=True)
 
     with chart_right:
-        merged["Sector"] = holdings["sector"].values
         sect_agg = merged.groupby("Sector")["Value (CAD)"].sum().sort_values(ascending=False)
         sector_colors = [SECTOR_COLORS.get(s, "#6b7280") for s in sect_agg.index]
         fig_sect = make_donut(
