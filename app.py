@@ -265,6 +265,33 @@ div[data-testid="stDataFrame"] table {
     text-decoration: underline;
 }
 
+/* ── 52-Week Range Bar ── */
+.range-bar-container {
+    margin: 0.5rem 0;
+}
+.range-bar {
+    position: relative;
+    height: 8px;
+    background: linear-gradient(to right, #f87171, #facc15, #34d399);
+    border-radius: 4px;
+    margin: 0.5rem 0 0.25rem 0;
+}
+.range-bar .marker {
+    position: absolute;
+    top: -4px;
+    width: 16px; height: 16px;
+    background: #f1f5f9;
+    border: 2px solid #0f172a;
+    border-radius: 50%;
+    transform: translateX(-50%);
+}
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
 /* ── Sidebar styling ── */
 section[data-testid="stSidebar"] {
     background: #0a0f1a;
@@ -348,6 +375,144 @@ def fetch_prices(tickers: list[str]) -> pd.DataFrame:
     if isinstance(prices.columns, pd.MultiIndex):
         prices.columns = prices.columns.get_level_values(-1)
     return prices.dropna(axis=1, how="all").ffill()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FUNDAMENTALS
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Tickers that are ETFs/commodities/crypto — skip for P/E, EPS, etc.
+_NON_EQUITY_TICKERS = {
+    "GLD", "CGL.TO", "IBIT", "ETHA", "BGU-U.TO",
+    "VIU.TO", "IDIV-B.TO",
+}
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def fetch_fundamentals(tickers: list[str]) -> pd.DataFrame:
+    """
+    Fetch key fundamental metrics from yfinance .info for each ticker.
+    Returns a DataFrame indexed by ticker with columns:
+      trailingPE, forwardPE, dividendYield, beta,
+      fiftyTwoWeekHigh, fiftyTwoWeekLow, marketCap, sector_yf
+    """
+    rows = []
+    for ticker in tickers:
+        try:
+            info = yf.Ticker(ticker).info or {}
+        except Exception:
+            info = {}
+
+        div_yield = info.get("dividendYield")
+        if div_yield is None:
+            div_yield = info.get("trailingAnnualDividendYield")
+
+        rows.append({
+            "ticker": ticker,
+            "trailingPE": info.get("trailingPE"),
+            "forwardPE": info.get("forwardPE"),
+            "dividendYield": div_yield,
+            "beta": info.get("beta"),
+            "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh"),
+            "fiftyTwoWeekLow": info.get("fiftyTwoWeekLow"),
+            "marketCap": info.get("marketCap"),
+        })
+    return pd.DataFrame(rows).set_index("ticker")
+
+
+def compute_portfolio_metrics(table: pd.DataFrame, fundamentals: pd.DataFrame,
+                              holdings: pd.DataFrame) -> dict:
+    """
+    Compute weighted-average portfolio metrics.
+    Only includes equities (skips ETFs/commodities) for P/E and EPS-based metrics.
+    """
+    # Merge fundamentals with table by ticker
+    merged = table.merge(fundamentals, left_on="Ticker", right_index=True, how="left")
+    total_value = merged["Value (CAD)"].sum()
+    if total_value == 0:
+        return {}
+
+    merged["weight"] = merged["Value (CAD)"] / total_value
+
+    # Filter equities only (exclude ETFs, commodities, crypto)
+    equities = merged[~merged["Ticker"].isin(_NON_EQUITY_TICKERS)]
+
+    # --- Weighted P/E (trailing) ---
+    pe_valid = equities.dropna(subset=["trailingPE"])
+    pe_valid = pe_valid[pe_valid["trailingPE"] > 0]
+    if not pe_valid.empty:
+        pe_weight_sum = pe_valid["weight"].sum()
+        weighted_pe = (pe_valid["trailingPE"] * pe_valid["weight"]).sum() / pe_weight_sum
+    else:
+        weighted_pe = None
+
+    # --- Weighted Forward P/E ---
+    fpe_valid = equities.dropna(subset=["forwardPE"])
+    fpe_valid = fpe_valid[fpe_valid["forwardPE"] > 0]
+    if not fpe_valid.empty:
+        fpe_weight_sum = fpe_valid["weight"].sum()
+        weighted_fpe = (fpe_valid["forwardPE"] * fpe_valid["weight"]).sum() / fpe_weight_sum
+    else:
+        weighted_fpe = None
+
+    # --- Weighted Dividend Yield ---
+    div_valid = merged.dropna(subset=["dividendYield"])
+    div_valid = div_valid[div_valid["dividendYield"] > 0]
+    if not div_valid.empty:
+        # Include all holdings for yield (ETFs can have distributions)
+        div_weight_sum = div_valid["weight"].sum()
+        weighted_yield = (div_valid["dividendYield"] * div_valid["weight"]).sum() / div_weight_sum
+    else:
+        weighted_yield = None
+
+    # --- Weighted Beta ---
+    beta_valid = merged.dropna(subset=["beta"])
+    if not beta_valid.empty:
+        beta_weight_sum = beta_valid["weight"].sum()
+        weighted_beta = (beta_valid["beta"] * beta_valid["weight"]).sum() / beta_weight_sum
+    else:
+        weighted_beta = None
+
+    # --- 52-Week Positioning ---
+    # What % of holdings are near 52w high vs 52w low
+    range_data = merged.dropna(subset=["fiftyTwoWeekHigh", "fiftyTwoWeekLow", "Price"])
+    near_high = 0  # within 5% of 52w high
+    near_low = 0   # within 5% of 52w low
+    positions_with_range = 0
+    avg_52w_position = []  # 0 = at low, 100 = at high
+
+    for _, r in range_data.iterrows():
+        hi = r["fiftyTwoWeekHigh"]
+        lo = r["fiftyTwoWeekLow"]
+        px = r["Price"]
+        if hi > lo and hi > 0:
+            positions_with_range += 1
+            pct_in_range = (px - lo) / (hi - lo) * 100
+            avg_52w_position.append((pct_in_range, r["weight"]))
+            if px >= hi * 0.95:
+                near_high += 1
+            if px <= lo * 1.05:
+                near_low += 1
+
+    if avg_52w_position:
+        weighted_52w = sum(p * w for p, w in avg_52w_position) / sum(w for _, w in avg_52w_position)
+    else:
+        weighted_52w = None
+
+    # --- Coverage stats ---
+    pe_coverage = len(pe_valid) / len(equities) * 100 if len(equities) > 0 else 0
+
+    return {
+        "weighted_pe": weighted_pe,
+        "weighted_fpe": weighted_fpe,
+        "weighted_yield": weighted_yield,
+        "weighted_beta": weighted_beta,
+        "weighted_52w_position": weighted_52w,
+        "near_52w_high": near_high,
+        "near_52w_low": near_low,
+        "pe_coverage": pe_coverage,
+        "total_value": total_value,
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -722,6 +887,88 @@ def main():
             "SECTOR ALLOCATION", sector_colors,
         )
         st.plotly_chart(fig_sect, use_container_width=True)
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SECTION 2.5 — PORTFOLIO METRICS
+    # ══════════════════════════════════════════════════════════════════════
+
+    st.markdown('<div class="section-header">Portfolio Metrics</div>',
+                unsafe_allow_html=True)
+    st.caption("Value-weighted fundamentals · Excludes ETFs and commodities for P/E")
+
+    with st.spinner("Fetching fundamentals..."):
+        fundamentals = fetch_fundamentals(all_tickers)
+
+    metrics = compute_portfolio_metrics(table, fundamentals, holdings)
+
+    if metrics:
+        w_pe = metrics.get("weighted_pe")
+        w_fpe = metrics.get("weighted_fpe")
+        w_yield = metrics.get("weighted_yield")
+        w_beta = metrics.get("weighted_beta")
+        w_52w = metrics.get("weighted_52w_position")
+        near_hi = metrics.get("near_52w_high", 0)
+        near_lo = metrics.get("near_52w_low", 0)
+        pe_cov = metrics.get("pe_coverage", 0)
+
+        # Row 1: Main metrics
+        st.markdown(
+            f"""
+            <div class="metric-row">
+                <div class="metric-card">
+                    <div class="label">Weighted P/E (Trailing)</div>
+                    <div class="value" style="font-size:1.6rem;">
+                        {f'{w_pe:.1f}x' if w_pe else '—'}
+                    </div>
+                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                        {f'Forward: {w_fpe:.1f}x' if w_fpe else 'Forward: —'}
+                        &nbsp;&middot;&nbsp; Coverage: {pe_cov:.0f}%
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">Weighted Dividend Yield</div>
+                    <div class="value" style="font-size:1.6rem; color:#34d399;">
+                        {f'{w_yield*100:.2f}%' if w_yield else '—'}
+                    </div>
+                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                        {f'~${metrics["total_value"]*w_yield/1e6:.1f}M annual income' if w_yield else ''}
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">Weighted Beta</div>
+                    <div class="value" style="font-size:1.6rem;">
+                        {f'{w_beta:.2f}' if w_beta else '—'}
+                    </div>
+                    <div class="delta" style="color:{'#34d399' if w_beta and w_beta < 1 else '#f87171' if w_beta and w_beta > 1 else '#64748b'}; font-size:0.78rem;">
+                        {'Lower volatility than market' if w_beta and w_beta < 1 else 'Higher volatility than market' if w_beta and w_beta > 1 else ''}
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">52-Week Positioning</div>
+                    <div class="value" style="font-size:1.6rem;">
+                        {f'{w_52w:.0f}%' if w_52w is not None else '—'}
+                    </div>
+                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                        {near_hi} near highs &nbsp;&middot;&nbsp; {near_lo} near lows
+                    </div>
+                    <div class="range-bar-container">
+                        <div class="range-bar">
+                            <div class="marker" style="left:{w_52w if w_52w is not None else 50}%;"></div>
+                        </div>
+                        <div class="range-labels">
+                            <span>52W Low</span>
+                            <span>52W High</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("Could not compute portfolio metrics.")
 
     st.markdown("---")
 
