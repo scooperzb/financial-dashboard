@@ -407,6 +407,21 @@ def fetch_fundamentals(tickers: list[str]) -> pd.DataFrame:
         if div_yield is None:
             div_yield = info.get("trailingAnnualDividendYield")
 
+        # Normalize: yfinance should return decimals (0.03 = 3%) but some
+        # tickers return the value already as a percentage (3.0) or even
+        # absurd numbers.  Clamp to a sane range.
+        if div_yield is not None:
+            try:
+                div_yield = float(div_yield)
+                # If > 1 it was likely returned as a percentage — convert
+                if div_yield > 1.0:
+                    div_yield = div_yield / 100.0
+                # Cap at 25% — anything higher is a data error
+                if div_yield > 0.25 or div_yield < 0:
+                    div_yield = None
+            except (TypeError, ValueError):
+                div_yield = None
+
         rows.append({
             "ticker": ticker,
             "trailingPE": info.get("trailingPE"),
@@ -458,7 +473,8 @@ def compute_portfolio_metrics(table: pd.DataFrame, fundamentals: pd.DataFrame,
     # --- Weighted Dividend Yield ---
     # Treat holdings with no yield data as 0% yield (not excluded).
     # This gives the true portfolio-level blended yield.
-    merged["div_clean"] = merged["dividendYield"].fillna(0).clip(lower=0)
+    # Extra safety: clip 0–0.25 (0–25%) to catch any surviving outliers.
+    merged["div_clean"] = merged["dividendYield"].fillna(0).clip(lower=0, upper=0.25)
     weighted_yield = (merged["div_clean"] * merged["weight"]).sum()
     if weighted_yield <= 0:
         weighted_yield = None
