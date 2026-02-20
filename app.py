@@ -456,21 +456,18 @@ def compute_portfolio_metrics(table: pd.DataFrame, fundamentals: pd.DataFrame,
         weighted_fpe = None
 
     # --- Weighted Dividend Yield ---
-    div_valid = merged.dropna(subset=["dividendYield"])
-    div_valid = div_valid[div_valid["dividendYield"] > 0]
-    if not div_valid.empty:
-        # Include all holdings for yield (ETFs can have distributions)
-        div_weight_sum = div_valid["weight"].sum()
-        weighted_yield = (div_valid["dividendYield"] * div_valid["weight"]).sum() / div_weight_sum
-    else:
+    # Treat holdings with no yield data as 0% yield (not excluded).
+    # This gives the true portfolio-level blended yield.
+    merged["div_clean"] = merged["dividendYield"].fillna(0).clip(lower=0)
+    weighted_yield = (merged["div_clean"] * merged["weight"]).sum()
+    if weighted_yield <= 0:
         weighted_yield = None
 
     # --- Weighted Beta ---
-    beta_valid = merged.dropna(subset=["beta"])
-    if not beta_valid.empty:
-        beta_weight_sum = beta_valid["weight"].sum()
-        weighted_beta = (beta_valid["beta"] * beta_valid["weight"]).sum() / beta_weight_sum
-    else:
+    # Weight against full portfolio — holdings without beta assumed beta=1 (market)
+    merged["beta_clean"] = merged["beta"].fillna(1.0)
+    weighted_beta = (merged["beta_clean"] * merged["weight"]).sum()
+    if weighted_beta <= 0:
         weighted_beta = None
 
     # --- 52-Week Positioning ---
