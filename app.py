@@ -851,6 +851,19 @@ def main():
     display = table[["Ticker", "Shares", "Price", "Day Change %",
                       "Value (CAD)", "Sector"]].copy()
 
+    # Ticker / sector search filter
+    search_query = st.text_input(
+        "Search", placeholder="Search by ticker or sector...",
+        label_visibility="collapsed",
+    )
+    if search_query:
+        q = search_query.strip().upper()
+        mask = (
+            display["Ticker"].str.upper().str.contains(q, na=False)
+            | display["Sector"].str.upper().str.contains(q, na=False)
+        )
+        display = display[mask]
+
     def color_day_change(val):
         if pd.isna(val):
             return "color: #475569"
