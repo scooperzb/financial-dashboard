@@ -851,18 +851,24 @@ def main():
     display = table[["Ticker", "Shares", "Price", "Day Change %",
                       "Value (CAD)", "Sector"]].copy()
 
-    # Ticker / sector search filter
-    search_query = st.text_input(
-        "Search", placeholder="Search by ticker or sector...",
-        label_visibility="collapsed",
-    )
-    if search_query:
-        q = search_query.strip().upper()
-        mask = (
-            display["Ticker"].str.upper().str.contains(q, na=False)
-            | display["Sector"].str.upper().str.contains(q, na=False)
+    # Ticker / sector search filter — multiselect filters instantly as you type
+    all_tickers_sorted = sorted(display["Ticker"].unique())
+    all_sectors_sorted = sorted(display["Sector"].dropna().unique())
+    filter_col1, filter_col2 = st.columns(2)
+    with filter_col1:
+        sel_tickers = st.multiselect(
+            "Filter by ticker", all_tickers_sorted,
+            placeholder="Type to search tickers...",
         )
-        display = display[mask]
+    with filter_col2:
+        sel_sectors = st.multiselect(
+            "Filter by sector", all_sectors_sorted,
+            placeholder="Type to search sectors...",
+        )
+    if sel_tickers:
+        display = display[display["Ticker"].isin(sel_tickers)]
+    if sel_sectors:
+        display = display[display["Sector"].isin(sel_sectors)]
 
     def color_day_change(val):
         if pd.isna(val):
