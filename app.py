@@ -908,18 +908,12 @@ def main():
     has_model = not model_df.empty
 
     if has_model:
-        view = st.radio(
-            "View",
-            options=["Holdings", "Model Portfolio"],
-            index=0,
-            horizontal=True,
-            label_visibility="collapsed",
-        )
+        tab_holdings, tab_model = st.tabs(["Holdings", "Model Portfolio"])
     else:
-        view = "Holdings"
+        tab_holdings = st.container()
+        tab_model = None
 
-    if view == "Holdings":
-        # ── Holdings view (unchanged) ──
+    with tab_holdings:
         st.markdown('<div class="section-header">Holdings</div>',
                     unsafe_allow_html=True)
 
@@ -962,108 +956,106 @@ def main():
 
         st.dataframe(styled, use_container_width=True, height=600, hide_index=True)
 
-    else:
-        # ── Model Portfolio comparison view ──
-        st.markdown('<div class="section-header">Model Portfolio Comparison</div>',
-                    unsafe_allow_html=True)
-        st.caption(
-            f"{model_meta.get('model_name', 'Model')} · "
-            f"Cash: {model_meta.get('cash_pct', 0)}% · "
-            f"{model_meta.get('num_constituents', 0)} constituents"
-        )
-
-        comparison = build_model_comparison(model_df, table, holdings)
-
-        # Filters
-        m_col1, m_col2 = st.columns(2)
-        with m_col1:
-            m_sel_tickers = st.multiselect(
-                "Filter by ticker",
-                sorted(comparison["Ticker"].unique()),
-                placeholder="Type to search tickers...",
-                key="model_ticker_filter",
-            )
-        with m_col2:
-            m_sel_status = st.multiselect(
-                "Filter by status",
-                sorted(comparison["Status"].unique()),
-                placeholder="Filter by status...",
-                key="model_status_filter",
+    if tab_model is not None:
+        with tab_model:
+            st.caption(
+                f"{model_meta.get('model_name', 'Model')} · "
+                f"Cash: {model_meta.get('cash_pct', 0)}% · "
+                f"{model_meta.get('num_constituents', 0)} constituents"
             )
 
-        display_model = comparison.copy()
-        if m_sel_tickers:
-            display_model = display_model[display_model["Ticker"].isin(m_sel_tickers)]
-        if m_sel_status:
-            display_model = display_model[display_model["Status"].isin(m_sel_status)]
+            comparison = build_model_comparison(model_df, table, holdings)
 
-        def color_divergence(val):
-            if pd.isna(val) or val == 0:
-                return "color: #64748b"
-            return "color: #34d399" if val > 0 else "color: #f87171"
+            # Filters
+            m_col1, m_col2 = st.columns(2)
+            with m_col1:
+                m_sel_tickers = st.multiselect(
+                    "Filter by ticker",
+                    sorted(comparison["Ticker"].unique()),
+                    placeholder="Type to search tickers...",
+                    key="model_ticker_filter",
+                )
+            with m_col2:
+                m_sel_status = st.multiselect(
+                    "Filter by status",
+                    sorted(comparison["Status"].unique()),
+                    placeholder="Filter by status...",
+                    key="model_status_filter",
+                )
 
-        def color_status(val):
-            if val == "Model Only":
-                return "color: #f87171"
-            if val == "Not in Model":
-                return "color: #f59e0b"
-            return "color: #94a3b8"
+            display_model = comparison.copy()
+            if m_sel_tickers:
+                display_model = display_model[display_model["Ticker"].isin(m_sel_tickers)]
+            if m_sel_status:
+                display_model = display_model[display_model["Status"].isin(m_sel_status)]
 
-        styled_model = (
-            display_model.style
-            .format({
-                "Target %":     "{:.2f}%",
-                "Actual %":     "{:.2f}%",
-                "Divergence %": lambda x: f"{x:+.2f}%",
-            })
-            .map(color_divergence, subset=["Divergence %"])
-            .map(color_status, subset=["Status"])
-        )
+            def color_divergence(val):
+                if pd.isna(val) or val == 0:
+                    return "color: #64748b"
+                return "color: #34d399" if val > 0 else "color: #f87171"
 
-        st.dataframe(styled_model, use_container_width=True, height=600,
-                      hide_index=True)
+            def color_status(val):
+                if val == "Model Only":
+                    return "color: #f87171"
+                if val == "Not in Model":
+                    return "color: #f59e0b"
+                return "color: #94a3b8"
 
-        # Summary metrics
-        in_both = len(comparison[comparison["Status"] == "Matched"])
-        model_only = len(comparison[comparison["Status"] == "Model Only"])
-        not_in_model = len(comparison[comparison["Status"] == "Not in Model"])
-        avg_div = comparison["Divergence %"].abs().mean()
+            styled_model = (
+                display_model.style
+                .format({
+                    "Target %":     "{:.2f}%",
+                    "Actual %":     "{:.2f}%",
+                    "Divergence %": lambda x: f"{x:+.2f}%",
+                })
+                .map(color_divergence, subset=["Divergence %"])
+                .map(color_status, subset=["Status"])
+            )
 
-        st.markdown(
-            f"""
-            <div class="metric-row">
-                <div class="metric-card">
-                    <div class="label">Matched Positions</div>
-                    <div class="value">{in_both}</div>
-                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                        In both model & portfolio
+            st.dataframe(styled_model, use_container_width=True, height=600,
+                          hide_index=True)
+
+            # Summary metrics
+            in_both = len(comparison[comparison["Status"] == "Matched"])
+            model_only = len(comparison[comparison["Status"] == "Model Only"])
+            not_in_model = len(comparison[comparison["Status"] == "Not in Model"])
+            avg_div = comparison["Divergence %"].abs().mean()
+
+            st.markdown(
+                f"""
+                <div class="metric-row">
+                    <div class="metric-card">
+                        <div class="label">Matched Positions</div>
+                        <div class="value">{in_both}</div>
+                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                            In both model & portfolio
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Model Only</div>
+                        <div class="value" style="color:#f87171;">{model_only}</div>
+                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                            In model but not held
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Not in Model</div>
+                        <div class="value" style="color:#f59e0b;">{not_in_model}</div>
+                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                            Held but not in model
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Avg. Abs. Divergence</div>
+                        <div class="value">{avg_div:.2f}%</div>
+                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                            Mean |actual - target|
+                        </div>
                     </div>
                 </div>
-                <div class="metric-card">
-                    <div class="label">Model Only</div>
-                    <div class="value" style="color:#f87171;">{model_only}</div>
-                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                        In model but not held
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="label">Not in Model</div>
-                    <div class="value" style="color:#f59e0b;">{not_in_model}</div>
-                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                        Held but not in model
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="label">Avg. Abs. Divergence</div>
-                    <div class="value">{avg_div:.2f}%</div>
-                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                        Mean |actual - target|
-                    </div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )
 
     st.markdown("---")
 
