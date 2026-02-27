@@ -66,7 +66,12 @@ html, body, [class*="css"] {
 /* ── Hide Streamlit branding ── */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
+header[data-testid="stHeader"] {
+    background: transparent;
+}
+header[data-testid="stHeader"] .stActionButton {
+    visibility: visible !important;
+}
 
 /* ── Main container ── */
 .main .block-container {
