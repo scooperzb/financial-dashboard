@@ -325,6 +325,28 @@ hr {
     color: #475569;
     padding: 1rem 0;
 }
+
+/* ── Tabs styling ── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0;
+    background: #0f172a;
+    border-radius: 10px;
+    padding: 4px;
+    border: 1px solid #334155;
+    margin-bottom: 1rem;
+}
+.stTabs [data-baseweb="tab"] {
+    padding: 0.6rem 2rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #94a3b8;
+    border-radius: 8px;
+    border: none;
+}
+.stTabs [aria-selected="true"] {
+    background: #1e293b !important;
+    color: #f1f5f9 !important;
+}
 </style>
 """
 
