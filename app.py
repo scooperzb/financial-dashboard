@@ -44,6 +44,7 @@ for corpus in ["punkt_tab", "punkt"]:
             pass
 
 HOLDINGS_FILE = Path(__file__).parent / "holdings.json"
+MODEL_FILE = Path(__file__).parent / "model_portfolio.json"
 FALLBACK_FX_RATE = 1.36
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -342,6 +343,17 @@ def load_holdings() -> tuple[dict, pd.DataFrame]:
     meta = data.get("_meta", {})
     df = pd.DataFrame(data["holdings"])
     df["weight"] = df["market_value"] / df["market_value"].sum()
+    return meta, df
+
+
+@st.cache_data(ttl=300)
+def load_model_portfolio() -> tuple[dict, pd.DataFrame]:
+    if not MODEL_FILE.exists():
+        return {}, pd.DataFrame()
+    with open(MODEL_FILE, "r") as f:
+        data = json.load(f)
+    meta = data.get("_meta", {})
+    df = pd.DataFrame(data.get("constituents", []))
     return meta, df
 
 
@@ -656,6 +668,52 @@ def build_table(holdings: pd.DataFrame, prices: pd.DataFrame,
     return df.sort_values("Value (CAD)", ascending=False).reset_index(drop=True)
 
 
+def build_model_comparison(model_df: pd.DataFrame,
+                           table: pd.DataFrame,
+                           holdings: pd.DataFrame) -> pd.DataFrame:
+    """Compare model target weights against actual portfolio weights."""
+    total_value = table["Value (CAD)"].sum()
+    name_map = holdings.set_index("ticker")["name"].to_dict()
+
+    # Compute actual weight per ticker
+    actual_weights = {}
+    if total_value > 0:
+        for _, row in table.iterrows():
+            actual_weights[row["Ticker"]] = (row["Value (CAD)"] / total_value) * 100
+
+    rows = []
+
+    # Model constituents
+    for _, m in model_df.iterrows():
+        ticker = m["ticker"]
+        target = m["target_pct"]
+        actual = actual_weights.pop(ticker, 0.0)
+        divergence = actual - target
+        status = "Matched" if actual > 0 else "Model Only"
+        rows.append({
+            "Ticker": ticker,
+            "Name": m["name"],
+            "Target %": target,
+            "Actual %": round(actual, 2),
+            "Divergence %": round(divergence, 2),
+            "Status": status,
+        })
+
+    # Holdings not in model
+    for ticker, actual in actual_weights.items():
+        rows.append({
+            "Ticker": ticker,
+            "Name": name_map.get(ticker, ""),
+            "Target %": 0.0,
+            "Actual %": round(actual, 2),
+            "Divergence %": round(actual, 2),
+            "Status": "Not in Model",
+        })
+
+    result = pd.DataFrame(rows)
+    return result.sort_values("Divergence %", ascending=True).reset_index(drop=True)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # CHARTS
 # ──────────────────────────────────────────────────────────────────────────────
@@ -843,50 +901,168 @@ def main():
     )
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 1 — HOLDINGS TABLE
+    # SECTION 1 — HOLDINGS / MODEL TOGGLE
     # ══════════════════════════════════════════════════════════════════════
 
-    st.markdown('<div class="section-header">Holdings</div>', unsafe_allow_html=True)
+    model_meta, model_df = load_model_portfolio()
+    has_model = not model_df.empty
 
-    display = table[["Ticker", "Shares", "Price", "Day Change %",
-                      "Value (CAD)", "Sector"]].copy()
-
-    # Ticker / sector search filter — multiselect filters instantly as you type
-    all_tickers_sorted = sorted(display["Ticker"].unique())
-    all_sectors_sorted = sorted(display["Sector"].dropna().unique())
-    filter_col1, filter_col2 = st.columns(2)
-    with filter_col1:
-        sel_tickers = st.multiselect(
-            "Filter by ticker", all_tickers_sorted,
-            placeholder="Type to search tickers...",
+    if has_model:
+        view = st.segmented_control(
+            "View",
+            options=["Holdings", "Model Portfolio"],
+            default="Holdings",
+            label_visibility="collapsed",
         )
-    with filter_col2:
-        sel_sectors = st.multiselect(
-            "Filter by sector", all_sectors_sorted,
-            placeholder="Type to search sectors...",
+    else:
+        view = "Holdings"
+
+    if view == "Holdings":
+        # ── Holdings view (unchanged) ──
+        st.markdown('<div class="section-header">Holdings</div>',
+                    unsafe_allow_html=True)
+
+        display = table[["Ticker", "Shares", "Price", "Day Change %",
+                          "Value (CAD)", "Sector"]].copy()
+
+        all_tickers_sorted = sorted(display["Ticker"].unique())
+        all_sectors_sorted = sorted(display["Sector"].dropna().unique())
+        filter_col1, filter_col2 = st.columns(2)
+        with filter_col1:
+            sel_tickers = st.multiselect(
+                "Filter by ticker", all_tickers_sorted,
+                placeholder="Type to search tickers...",
+            )
+        with filter_col2:
+            sel_sectors = st.multiselect(
+                "Filter by sector", all_sectors_sorted,
+                placeholder="Type to search sectors...",
+            )
+        if sel_tickers:
+            display = display[display["Ticker"].isin(sel_tickers)]
+        if sel_sectors:
+            display = display[display["Sector"].isin(sel_sectors)]
+
+        def color_day_change(val):
+            if pd.isna(val):
+                return "color: #475569"
+            return "color: #34d399" if val >= 0 else "color: #f87171"
+
+        styled = (
+            display.style
+            .format({
+                "Shares":       "{:,.0f}",
+                "Price":        lambda x: f"${x:,.2f}" if pd.notna(x) else "—",
+                "Day Change %": lambda x: f"{x:+.2f}%" if pd.notna(x) else "—",
+                "Value (CAD)":  "${:,.0f}",
+            })
+            .map(color_day_change, subset=["Day Change %"])
         )
-    if sel_tickers:
-        display = display[display["Ticker"].isin(sel_tickers)]
-    if sel_sectors:
-        display = display[display["Sector"].isin(sel_sectors)]
 
-    def color_day_change(val):
-        if pd.isna(val):
-            return "color: #475569"
-        return "color: #34d399" if val >= 0 else "color: #f87171"
+        st.dataframe(styled, use_container_width=True, height=600, hide_index=True)
 
-    styled = (
-        display.style
-        .format({
-            "Shares":       "{:,.0f}",
-            "Price":        lambda x: f"${x:,.2f}" if pd.notna(x) else "—",
-            "Day Change %": lambda x: f"{x:+.2f}%" if pd.notna(x) else "—",
-            "Value (CAD)":  "${:,.0f}",
-        })
-        .map(color_day_change, subset=["Day Change %"])
-    )
+    else:
+        # ── Model Portfolio comparison view ──
+        st.markdown('<div class="section-header">Model Portfolio Comparison</div>',
+                    unsafe_allow_html=True)
+        st.caption(
+            f"{model_meta.get('model_name', 'Model')} · "
+            f"Cash: {model_meta.get('cash_pct', 0)}% · "
+            f"{model_meta.get('num_constituents', 0)} constituents"
+        )
 
-    st.dataframe(styled, use_container_width=True, height=600, hide_index=True)
+        comparison = build_model_comparison(model_df, table, holdings)
+
+        # Filters
+        m_col1, m_col2 = st.columns(2)
+        with m_col1:
+            m_sel_tickers = st.multiselect(
+                "Filter by ticker",
+                sorted(comparison["Ticker"].unique()),
+                placeholder="Type to search tickers...",
+                key="model_ticker_filter",
+            )
+        with m_col2:
+            m_sel_status = st.multiselect(
+                "Filter by status",
+                sorted(comparison["Status"].unique()),
+                placeholder="Filter by status...",
+                key="model_status_filter",
+            )
+
+        display_model = comparison.copy()
+        if m_sel_tickers:
+            display_model = display_model[display_model["Ticker"].isin(m_sel_tickers)]
+        if m_sel_status:
+            display_model = display_model[display_model["Status"].isin(m_sel_status)]
+
+        def color_divergence(val):
+            if pd.isna(val) or val == 0:
+                return "color: #64748b"
+            return "color: #34d399" if val > 0 else "color: #f87171"
+
+        def color_status(val):
+            if val == "Model Only":
+                return "color: #f87171"
+            if val == "Not in Model":
+                return "color: #f59e0b"
+            return "color: #94a3b8"
+
+        styled_model = (
+            display_model.style
+            .format({
+                "Target %":     "{:.2f}%",
+                "Actual %":     "{:.2f}%",
+                "Divergence %": lambda x: f"{x:+.2f}%",
+            })
+            .map(color_divergence, subset=["Divergence %"])
+            .map(color_status, subset=["Status"])
+        )
+
+        st.dataframe(styled_model, use_container_width=True, height=600,
+                      hide_index=True)
+
+        # Summary metrics
+        in_both = len(comparison[comparison["Status"] == "Matched"])
+        model_only = len(comparison[comparison["Status"] == "Model Only"])
+        not_in_model = len(comparison[comparison["Status"] == "Not in Model"])
+        avg_div = comparison["Divergence %"].abs().mean()
+
+        st.markdown(
+            f"""
+            <div class="metric-row">
+                <div class="metric-card">
+                    <div class="label">Matched Positions</div>
+                    <div class="value">{in_both}</div>
+                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                        In both model & portfolio
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">Model Only</div>
+                    <div class="value" style="color:#f87171;">{model_only}</div>
+                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                        In model but not held
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">Not in Model</div>
+                    <div class="value" style="color:#f59e0b;">{not_in_model}</div>
+                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                        Held but not in model
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">Avg. Abs. Divergence</div>
+                    <div class="value">{avg_div:.2f}%</div>
+                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                        Mean |actual - target|
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
 

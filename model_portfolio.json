@@ -1,0 +1,313 @@
+{
+  "_meta": {
+    "last_updated": "2026-02-27",
+    "source": "Converted from Model Constituents (5).csv",
+    "model_name": "North American Dividend - Borden Model (fixed)",
+    "total_equity_pct": 90.95,
+    "cash_pct": 9.05,
+    "num_constituents": 43
+  },
+  "constituents": [
+    {
+      "name": "AECON GROUP INC",
+      "ticker": "ARE.TO",
+      "raw_ticker": "ARE-T",
+      "exchange": "TSX",
+      "target_pct": 1.0
+    },
+    {
+      "name": "ALIMENTATION COUCHE-TARD INC COM",
+      "ticker": "ATD.TO",
+      "raw_ticker": "ATD-T",
+      "exchange": "TSX",
+      "target_pct": 2.35
+    },
+    {
+      "name": "ALPHABET INC CLASS A COMMON STOCK",
+      "ticker": "GOOGL",
+      "raw_ticker": "GOOGL-O",
+      "exchange": "NASDAQ",
+      "target_pct": 2.0
+    },
+    {
+      "name": "AMAZON.COM CDR CAD HEDGED CIBC DEPOSITARY RECEIPTS REG S",
+      "ticker": "AMZN.TO",
+      "raw_ticker": "AMZN-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "ATKINSREALIS GROUP INC COM",
+      "ticker": "ATRL.TO",
+      "raw_ticker": "ATRL-T",
+      "exchange": "TSX",
+      "target_pct": 3.0
+    },
+    {
+      "name": "BANK OF MONTREAL",
+      "ticker": "BMO.TO",
+      "raw_ticker": "BMO-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "BANK OF NOVA SCOTIA",
+      "ticker": "BNS.TO",
+      "raw_ticker": "BNS-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "BROOKFIELD CORP VTG SHS CL A",
+      "ticker": "BN.TO",
+      "raw_ticker": "BN-T",
+      "exchange": "TSX",
+      "target_pct": 3.0
+    },
+    {
+      "name": "CANADIAN NATIONAL RAILWAY CO",
+      "ticker": "CNR.TO",
+      "raw_ticker": "CNR-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "CANADIAN NATURAL RESOURCES LTD",
+      "ticker": "CNQ.TO",
+      "raw_ticker": "CNQ-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "CANADIAN PAC KANS CITY LTD COM",
+      "ticker": "CP.TO",
+      "raw_ticker": "CP-T",
+      "exchange": "TSX",
+      "target_pct": 2.5
+    },
+    {
+      "name": "CME GROUP INC",
+      "ticker": "CME",
+      "raw_ticker": "CME-O",
+      "exchange": "NASDAQ",
+      "target_pct": 1.5
+    },
+    {
+      "name": "ENBRIDGE INC",
+      "ticker": "ENB.TO",
+      "raw_ticker": "ENB-T",
+      "exchange": "TSX",
+      "target_pct": 3.0
+    },
+    {
+      "name": "EXXON MOBIL CORP",
+      "ticker": "XOM",
+      "raw_ticker": "XOM-N",
+      "exchange": "NYSE",
+      "target_pct": 2.0
+    },
+    {
+      "name": "FORTIS INC",
+      "ticker": "FTS.TO",
+      "raw_ticker": "FTS-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "GENERAL DYNAMICS CORP",
+      "ticker": "GD",
+      "raw_ticker": "GD-N",
+      "exchange": "NYSE",
+      "target_pct": 3.0
+    },
+    {
+      "name": "HOME DEPOT INC",
+      "ticker": "HD",
+      "raw_ticker": "HD-N",
+      "exchange": "NYSE",
+      "target_pct": 2.0
+    },
+    {
+      "name": "HONEYWELL INTL INC",
+      "ticker": "HON",
+      "raw_ticker": "HON-O",
+      "exchange": "NASDAQ",
+      "target_pct": 1.5
+    },
+    {
+      "name": "HYDRO ONE LTD COM",
+      "ticker": "H.TO",
+      "raw_ticker": "H-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "INTACT FINANCIAL CORP",
+      "ticker": "IFC.TO",
+      "raw_ticker": "IFC-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "JOHNSON & JOHNSON COMMON STOCK",
+      "ticker": "JNJ",
+      "raw_ticker": "JNJ-N",
+      "exchange": "NYSE",
+      "target_pct": 2.0
+    },
+    {
+      "name": "JPMORGAN CHASE & CO",
+      "ticker": "JPM",
+      "raw_ticker": "JPM-N",
+      "exchange": "NYSE",
+      "target_pct": 4.0
+    },
+    {
+      "name": "LOBLAW COMPANIES LTD",
+      "ticker": "L.TO",
+      "raw_ticker": "L-T",
+      "exchange": "TSX",
+      "target_pct": 1.5
+    },
+    {
+      "name": "MCDONALDS CORP",
+      "ticker": "MCD",
+      "raw_ticker": "MCD-N",
+      "exchange": "NYSE",
+      "target_pct": 3.0
+    },
+    {
+      "name": "MEDTRONIC PLC COM",
+      "ticker": "MDT",
+      "raw_ticker": "MDT-N",
+      "exchange": "NYSE",
+      "target_pct": 1.5
+    },
+    {
+      "name": "MICROSOFT CORP",
+      "ticker": "MSFT",
+      "raw_ticker": "MSFT-O",
+      "exchange": "NASDAQ",
+      "target_pct": 2.0
+    },
+    {
+      "name": "MONDELEZ INTERNATIONAL INC COM",
+      "ticker": "MDLZ",
+      "raw_ticker": "MDLZ-O",
+      "exchange": "NASDAQ",
+      "target_pct": 1.0
+    },
+    {
+      "name": "NEXTERA ENERGY INC",
+      "ticker": "NEE",
+      "raw_ticker": "NEE-N",
+      "exchange": "NYSE",
+      "target_pct": 2.0
+    },
+    {
+      "name": "ORACLE CORPORATION",
+      "ticker": "ORCL",
+      "raw_ticker": "ORCL-N",
+      "exchange": "NYSE",
+      "target_pct": 1.0
+    },
+    {
+      "name": "PREMIUM BRANDS HOLDINGS CORPORATION",
+      "ticker": "PBH.TO",
+      "raw_ticker": "PBH-T",
+      "exchange": "TSX",
+      "target_pct": 1.0
+    },
+    {
+      "name": "PROCTER & GAMBLE CO",
+      "ticker": "PG",
+      "raw_ticker": "PG-N",
+      "exchange": "NYSE",
+      "target_pct": 2.0
+    },
+    {
+      "name": "PROGRESSIVE CORP-OHIO",
+      "ticker": "PGR",
+      "raw_ticker": "PGR-N",
+      "exchange": "NYSE",
+      "target_pct": 1.75
+    },
+    {
+      "name": "PUBLIC STORAGE",
+      "ticker": "PSA",
+      "raw_ticker": "PSA-N",
+      "exchange": "NYSE",
+      "target_pct": 1.5
+    },
+    {
+      "name": "SHERWIN WILLIAMS CO",
+      "ticker": "SHW",
+      "raw_ticker": "SHW-N",
+      "exchange": "NYSE",
+      "target_pct": 2.35
+    },
+    {
+      "name": "SHOPIFY INC CL A",
+      "ticker": "SHOP.TO",
+      "raw_ticker": "SHOP-T",
+      "exchange": "TSX",
+      "target_pct": 1.5
+    },
+    {
+      "name": "STRYKER CORP",
+      "ticker": "SYK",
+      "raw_ticker": "SYK-N",
+      "exchange": "NYSE",
+      "target_pct": 2.0
+    },
+    {
+      "name": "TC ENERGY CORP COM",
+      "ticker": "TRP.TO",
+      "raw_ticker": "TRP-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "TELUS CORPORATION",
+      "ticker": "T.TO",
+      "raw_ticker": "T-T",
+      "exchange": "TSX",
+      "target_pct": 2.0
+    },
+    {
+      "name": "TJX COMPANIES INC NEW",
+      "ticker": "TJX",
+      "raw_ticker": "TJX-N",
+      "exchange": "NYSE",
+      "target_pct": 3.0
+    },
+    {
+      "name": "TORONTO-DOMINION BANK",
+      "ticker": "TD.TO",
+      "raw_ticker": "TD-T",
+      "exchange": "TSX",
+      "target_pct": 4.0
+    },
+    {
+      "name": "UBER TECHNOLOGIES INC COMMON STOCK",
+      "ticker": "UBER",
+      "raw_ticker": "UBER-N",
+      "exchange": "NYSE",
+      "target_pct": 1.0
+    },
+    {
+      "name": "VISA INC CL A COMMON STOCK",
+      "ticker": "V",
+      "raw_ticker": "V-N",
+      "exchange": "NYSE",
+      "target_pct": 3.0
+    },
+    {
+      "name": "WASTE CONNECTIONS INC COM",
+      "ticker": "WCN.TO",
+      "raw_ticker": "WCN-T",
+      "exchange": "TSX",
+      "target_pct": 3.0
+    }
+  ]
+}
