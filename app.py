@@ -908,10 +908,11 @@ def main():
     has_model = not model_df.empty
 
     if has_model:
-        view = st.segmented_control(
+        view = st.radio(
             "View",
             options=["Holdings", "Model Portfolio"],
-            default="Holdings",
+            index=0,
+            horizontal=True,
             label_visibility="collapsed",
         )
     else:
