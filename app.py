@@ -1044,15 +1044,22 @@ def main():
             # Summary metrics — dynamic per model
             in_both = len(comparison[comparison["Status"] == "Matched"])
             model_only = len(comparison[comparison["Status"] == "Model Only"])
-            not_in_model = len(comparison[comparison["Status"] == "Not in Model"])
+            total_positions = len(comparison)
             avg_div = comparison["Divergence %"].abs().mean()
 
             st.markdown(
                 f"""
                 <div class="metric-row">
                     <div class="metric-card">
+                        <div class="label">Total Positions</div>
+                        <div class="value">{total_positions}</div>
+                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                            Model constituents
+                        </div>
+                    </div>
+                    <div class="metric-card">
                         <div class="label">Matched Positions</div>
-                        <div class="value">{in_both}</div>
+                        <div class="value" style="color:#34d399;">{in_both}</div>
                         <div class="delta" style="color:#64748b; font-size:0.78rem;">
                             In both model & portfolio
                         </div>
@@ -1062,13 +1069,6 @@ def main():
                         <div class="value" style="color:#f87171;">{model_only}</div>
                         <div class="delta" style="color:#64748b; font-size:0.78rem;">
                             In model but not held
-                        </div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="label">Not in Model</div>
-                        <div class="value" style="color:#f59e0b;">{not_in_model}</div>
-                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                            Held but not in model
                         </div>
                     </div>
                     <div class="metric-card">
