@@ -339,14 +339,19 @@ hr {
     padding: 4px;
     border: 1px solid #334155;
     margin-bottom: 1rem;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
 }
 .stTabs [data-baseweb="tab"] {
-    padding: 0.6rem 2rem;
+    padding: 0.6rem 1.2rem;
     font-size: 0.95rem;
     font-weight: 600;
     color: #94a3b8;
     border-radius: 8px;
     border: none;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 .stTabs [aria-selected="true"] {
     background: #1e293b !important;
