@@ -737,17 +737,6 @@ def build_model_comparison(model_df: pd.DataFrame,
             "Status": status,
         })
 
-    # Holdings not in model
-    for ticker, actual in actual_weights.items():
-        rows.append({
-            "Ticker": ticker,
-            "Name": name_map.get(ticker, ""),
-            "Target %": 0.0,
-            "Actual %": round(actual, 2),
-            "Divergence %": round(actual, 2),
-            "Status": "Not in Model",
-        })
-
     result = pd.DataFrame(rows)
     return result.sort_values("Divergence %", ascending=True).reset_index(drop=True)
 
