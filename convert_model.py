@@ -1,10 +1,12 @@
 """
-CSV -> JSON converter for the Model Portfolio.
+CSV -> JSON converter for Model Portfolios.
 
 Usage:
-    python convert_model.py "path/to/Model Constituents.csv"
+    python convert_model.py "path/to/Model.csv" --tab-name "NA Div Model"
+    python convert_model.py "path/to/Model.csv" --tab-name "Growth" -o models/growth.json
 
-Produces model_portfolio.json in the same directory as this script.
+Produces a JSON file in the models/ directory by default.
+The dashboard auto-discovers all JSON files in models/ and creates a tab for each.
 """
 
 import argparse
@@ -30,10 +32,16 @@ def convert_ticker(raw: str) -> str:
     return raw
 
 
-def convert_csv_to_json(csv_path: str, output_path: str | None = None):
+def convert_csv_to_json(csv_path: str, output_path: str | None = None,
+                        tab_name: str | None = None):
     csv_path = Path(csv_path)
+    models_dir = Path(__file__).parent / "models"
+    models_dir.mkdir(exist_ok=True)
+
     if output_path is None:
-        output_path = Path(__file__).parent / "model_portfolio.json"
+        # Auto-generate filename from tab_name or CSV name
+        slug = (tab_name or csv_path.stem).lower().replace(" ", "_").replace("-", "_")
+        output_path = models_dir / f"{slug}.json"
     else:
         output_path = Path(output_path)
 
@@ -94,6 +102,7 @@ def convert_csv_to_json(csv_path: str, output_path: str | None = None):
             "last_updated": datetime.now().strftime("%Y-%m-%d"),
             "source": f"Converted from {csv_path.name}",
             "model_name": model_name or "Model Portfolio",
+            "tab_name": tab_name or model_name or "Model",
             "total_equity_pct": round(sum(c["target_pct"] for c in constituents), 2),
             "cash_pct": cash_pct,
             "num_constituents": len(constituents),
@@ -106,6 +115,7 @@ def convert_csv_to_json(csv_path: str, output_path: str | None = None):
 
     print(f"Converted {len(constituents)} constituents -> {output_path}")
     print(f"  Model: {output['_meta']['model_name']}")
+    print(f"  Tab:   {output['_meta']['tab_name']}")
     print(f"  Cash: {cash_pct}%, Equity: {output['_meta']['total_equity_pct']}%")
     for c in constituents:
         print(f"  {c['ticker']:<15} {c['target_pct']:>5}%  ({c['name'][:40]})")
@@ -114,6 +124,7 @@ def convert_csv_to_json(csv_path: str, output_path: str | None = None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert model CSV to JSON")
     parser.add_argument("csv_file", help="Path to the Model Constituents CSV")
-    parser.add_argument("-o", "--output", help="Output JSON path (default: model_portfolio.json)")
+    parser.add_argument("--tab-name", help="Short name for the dashboard tab (e.g. 'NA Div Model')")
+    parser.add_argument("-o", "--output", help="Output JSON path (default: models/<tab_name>.json)")
     args = parser.parse_args()
-    convert_csv_to_json(args.csv_file, args.output)
+    convert_csv_to_json(args.csv_file, args.output, args.tab_name)

@@ -2,7 +2,8 @@
   "_meta": {
     "last_updated": "2026-02-27",
     "source": "Converted from Model Constituents (5).csv",
-    "model_name": "North American Dividend - Borden Model (fixed)",
+    "model_name": "North American Dividend - Borden Model",
+    "tab_name": "NA Div Model",
     "total_equity_pct": 90.95,
     "cash_pct": 9.05,
     "num_constituents": 43

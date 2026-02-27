@@ -44,7 +44,7 @@ for corpus in ["punkt_tab", "punkt"]:
             pass
 
 HOLDINGS_FILE = Path(__file__).parent / "holdings.json"
-MODEL_FILE = Path(__file__).parent / "model_portfolio.json"
+MODELS_DIR = Path(__file__).parent / "models"
 FALLBACK_FX_RATE = 1.36
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -374,14 +374,25 @@ def load_holdings() -> tuple[dict, pd.DataFrame]:
 
 
 @st.cache_data(ttl=300)
-def load_model_portfolio() -> tuple[dict, pd.DataFrame]:
-    if not MODEL_FILE.exists():
-        return {}, pd.DataFrame()
-    with open(MODEL_FILE, "r") as f:
-        data = json.load(f)
-    meta = data.get("_meta", {})
-    df = pd.DataFrame(data.get("constituents", []))
-    return meta, df
+def load_all_models() -> list[tuple[dict, pd.DataFrame]]:
+    """Load all model JSON files from the models/ directory.
+    Returns a list of (meta, constituents_df) tuples, sorted by tab_name.
+    """
+    models = []
+    if not MODELS_DIR.exists():
+        return models
+    for fpath in sorted(MODELS_DIR.glob("*.json")):
+        try:
+            with open(fpath, "r") as f:
+                data = json.load(f)
+            meta = data.get("_meta", {})
+            meta.setdefault("tab_name", meta.get("model_name", fpath.stem))
+            df = pd.DataFrame(data.get("constituents", []))
+            if not df.empty:
+                models.append((meta, df))
+        except Exception:
+            pass
+    return models
 
 
 @st.cache_data(ttl=120)
@@ -928,19 +939,16 @@ def main():
     )
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 1 — HOLDINGS / MODEL TOGGLE
+    # SECTION 1 — HOLDINGS / MODEL TABS
     # ══════════════════════════════════════════════════════════════════════
 
-    model_meta, model_df = load_model_portfolio()
-    has_model = not model_df.empty
+    all_models = load_all_models()
 
-    if has_model:
-        tab_holdings, tab_model = st.tabs(["Holdings", "Model Portfolio"])
-    else:
-        tab_holdings = st.container()
-        tab_model = None
+    tab_names = ["Holdings"] + [m[0].get("tab_name", "Model") for m in all_models]
+    tabs = st.tabs(tab_names)
 
-    with tab_holdings:
+    # ── Holdings tab ──
+    with tabs[0]:
         st.markdown('<div class="section-header">Holdings</div>',
                     unsafe_allow_html=True)
 
@@ -983,8 +991,10 @@ def main():
 
         st.dataframe(styled, use_container_width=True, height=600, hide_index=True)
 
-    if tab_model is not None:
-        with tab_model:
+    # ── Model tabs (dynamic) ──
+    for i, (model_meta, model_df) in enumerate(all_models):
+        with tabs[i + 1]:
+            model_key = f"model_{i}"
             st.caption(
                 f"{model_meta.get('model_name', 'Model')} · "
                 f"Cash: {model_meta.get('cash_pct', 0)}% · "
@@ -1000,14 +1010,14 @@ def main():
                     "Filter by ticker",
                     sorted(comparison["Ticker"].unique()),
                     placeholder="Type to search tickers...",
-                    key="model_ticker_filter",
+                    key=f"{model_key}_ticker_filter",
                 )
             with m_col2:
                 m_sel_status = st.multiselect(
                     "Filter by status",
                     sorted(comparison["Status"].unique()),
                     placeholder="Filter by status...",
-                    key="model_status_filter",
+                    key=f"{model_key}_status_filter",
                 )
 
             display_model = comparison.copy()
@@ -1042,7 +1052,7 @@ def main():
             st.dataframe(styled_model, use_container_width=True, height=600,
                           hide_index=True)
 
-            # Summary metrics
+            # Summary metrics — dynamic per model
             in_both = len(comparison[comparison["Status"] == "Matched"])
             model_only = len(comparison[comparison["Status"] == "Model Only"])
             not_in_model = len(comparison[comparison["Status"] == "Not in Model"])
