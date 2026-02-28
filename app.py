@@ -357,6 +357,11 @@ hr {
     background: #1e293b !important;
     color: #f1f5f9 !important;
 }
+
+/* ── FX Popover sizing ── */
+[data-testid="stPopover"] > div {
+    min-width: 420px;
+}
 </style>
 """
 
@@ -414,6 +419,18 @@ def get_fx_rate() -> float:
     except Exception:
         pass
     return FALLBACK_FX_RATE
+
+
+@st.cache_data(ttl=300)
+def fetch_fx_history(period: str = "30d") -> pd.DataFrame:
+    """Fetch historical USD/CAD exchange rates for the FX popover chart."""
+    try:
+        hist = yf.Ticker("USDCAD=X").history(period=period)
+        if not hist.empty:
+            return hist[["Close"]].dropna()
+    except Exception:
+        pass
+    return pd.DataFrame()
 
 
 @st.cache_data(ttl=120)
@@ -867,6 +884,46 @@ def make_donut(labels, values, title, colors=None, center_text=None,
     return fig
 
 
+def make_fx_chart(fx_df: pd.DataFrame) -> go.Figure:
+    """Build a compact 30-day USD/CAD line chart for the FX popover."""
+    dates = fx_df.index
+    closes = fx_df["Close"]
+    y_min = closes.min()
+    y_max = closes.max()
+    y_pad = (y_max - y_min) * 0.15 or 0.005  # 15% padding, min 0.005
+
+    fig = go.Figure()
+
+    # Area fill from y_min baseline (not zero)
+    fig.add_trace(go.Scatter(
+        x=dates, y=closes, mode="lines",
+        line=dict(color="#38bdf8", width=2.5),
+        fill="tonexty", fillcolor="rgba(56, 189, 248, 0.10)",
+        hovertemplate="<b>%{x|%b %d}</b><br>USD/CAD: %{y:.4f}<extra></extra>",
+    ))
+
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=220, margin=dict(l=0, r=0, t=10, b=0),
+        font=dict(color="#cbd5e1", family="Inter", size=11),
+        hovermode="x unified",
+        showlegend=False,
+        xaxis=dict(
+            showgrid=False, zeroline=False,
+            tickformat="%b %d",
+            linecolor="#334155",
+        ),
+        yaxis=dict(
+            showgrid=True, gridcolor="#1e293b", zeroline=False,
+            tickformat=".4f",
+            side="right",
+            range=[y_min - y_pad, y_max + y_pad],
+        ),
+    )
+    return fig
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # STREAMLIT APP
 # ──────────────────────────────────────────────────────────────────────────────
@@ -971,10 +1028,6 @@ def main():
                     <span class="meta-icon">📊</span> {num_positions}
                 </span>
                 <span class="meta-chip">
-                    <span class="meta-label">FX</span>
-                    USD/CAD {fx_rate:.4f}
-                </span>
-                <span class="meta-chip">
                     <span style="color:#34d399;">{gainers} ▲</span>
                     &nbsp;/&nbsp;
                     <span style="color:#f87171;">{losers} ▼</span>
@@ -990,6 +1043,40 @@ def main():
         """,
         unsafe_allow_html=True,
     )
+
+    # ── FX Popover with 30-day chart ──
+    with st.popover(f"💱 USD/CAD {fx_rate:.4f}", use_container_width=False):
+        fx_hist = fetch_fx_history("30d")
+        if not fx_hist.empty:
+            closes = fx_hist["Close"]
+            hi = closes.max()
+            lo = closes.min()
+            first_val = closes.iloc[0]
+            last_val = closes.iloc[-1]
+            change_pct = ((last_val - first_val) / first_val) * 100
+            change_color = "#34d399" if change_pct >= 0 else "#f87171"
+            change_arrow = "▲" if change_pct >= 0 else "▼"
+
+            st.plotly_chart(make_fx_chart(fx_hist), use_container_width=True,
+                            key="fx_popover_chart")
+
+            st.markdown(
+                f"""
+                <div style="display:flex; justify-content:space-between;
+                            font-size:0.8rem; color:#94a3b8; padding:0 0.2rem;">
+                    <span>30d High: <b style="color:#e2e8f0;">{hi:.4f}</b></span>
+                    <span>30d Low: <b style="color:#e2e8f0;">{lo:.4f}</b></span>
+                    <span>Change:
+                        <b style="color:{change_color};">
+                            {change_arrow} {abs(change_pct):.2f}%
+                        </b>
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.caption("FX history unavailable")
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 1 — HOLDINGS / MODEL TABS
