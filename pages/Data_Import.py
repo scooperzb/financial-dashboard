@@ -30,6 +30,39 @@ SECTOR_OPTIONS = [
     "Digital Assets", "ETF - Equity", "Other",
 ]
 
+# Ticker suffix mapping: broker suffix → yfinance suffix
+TICKER_SUFFIX_MAP = {
+    "-T":  ".TO",   # TSX
+    "-N":  "",      # NYSE
+    "-O":  "",      # NASDAQ
+    "-P":  "",      # NYSE Arca / other
+    "-US": "",      # US OTC
+    "-V":  ".V",    # TSX Venture
+    "-CT": ".TO",   # TSX (alternate)
+    "-CF": ".TO",   # TSX (alternate)
+    "-CN": ".CN",   # CSE
+}
+
+# Broker section name → dashboard sector
+SECTION_SECTOR_MAP = {
+    "BASIC MATERIALS":      "Commodities",
+    "ENERGY":               "Energy",
+    "INDUSTRIAL":           "Industrials",
+    "CONSUMER,  CYCLICAL":  "Consumer Discretionary",
+    "CONSUMER,  NON-CYCLICAL": "Consumer Staples",
+    "FINANCIAL":            "Financials",
+    "TECHNOLOGY":           "Technology",
+    "COMMUNICATIONS":       "Telecommunications",
+    "UTILITIES":            "Utilities",
+    "EQUITY FUNDS & EXCHANGE TRADED FUNDS (ETFS)": "ETF - Equity",
+    "BOND FUNDS & EXCHANGE TRADED FUNDS (ETFS)": "Other",
+    "OTHER":                "Other",
+    "RATE RESET PREFERREDS": "Financials",
+    "CONVERTIBLE DEBENTURES": "Other",
+    "ALTERNATIVE INVESTMENTS": "Other",
+    "MULTI-ASSET":          "Other",
+}
+
 # ──────────────────────────────────────────────────────────────────────────────
 # CSS
 # ──────────────────────────────────────────────────────────────────────────────
@@ -148,91 +181,199 @@ def enrich_row(ticker: str) -> dict:
     }
 
 
-def parse_holdings_file(file_bytes: bytes, filename: str) -> list[dict] | None:
+def _has_exchange_suffix(raw: str) -> bool:
+    """Check if a broker symbol has a recognized exchange suffix."""
+    return any(raw.endswith(sfx) for sfx in TICKER_SUFFIX_MAP)
+
+
+def convert_broker_ticker(raw: str) -> str:
+    """Convert broker symbol to yfinance ticker.
+
+    Examples:  GOOGL-O → GOOGL,  BMO-T → BMO.TO,  V-N → V,  ZQQ-T → ZQQ.TO
+    Handles apostrophe tickers like BGU'U-T → BGU-U.TO
+    """
+    raw = raw.strip()
+    for suffix, replacement in TICKER_SUFFIX_MAP.items():
+        if raw.endswith(suffix):
+            base = raw[: -len(suffix)]
+            # Replace apostrophes with hyphens (e.g. BGU'U → BGU-U)
+            base = base.replace("'", "-")
+            return base + replacement
+    return raw
+
+
+def _find_header_row(df: pd.DataFrame) -> int | None:
+    """Find the row containing column headers like 'Symbol' or 'Quantity'."""
+    for i in range(min(10, len(df))):
+        row_vals = [str(v).strip().lower() for v in df.iloc[i]]
+        if "symbol" in row_vals or "ticker" in row_vals:
+            return i
+    return None
+
+
+def parse_holdings_file(file_bytes: bytes, filename: str) -> tuple[list[dict], str] | None:
     """Parse a holdings file (CSV or Excel) from broker export.
 
-    Expected columns (flexible matching):
-      - Name / Security Name
-      - Ticker / Symbol
-      - Currency / Curr
-      - Quantity / Shares / Units
-      - Market Value / Value
-      - Sector / Asset Class
+    Handles the Scotia / broker XLS format with:
+    - Date header row above column headers
+    - Section headers (EQUITY, ENERGY, FINANCIAL, etc.) for sector inference
+    - "Total" summary rows to skip
+    - Broker ticker format (GOOGL-O, BMO-T, etc.)
 
-    Returns list of holdings dicts or None if parsing fails.
+    Also handles simple flat CSV/Excel with standard column names.
+
+    Returns (holdings_list, report_date_str) or None if parsing fails.
     """
-    # Read into DataFrame based on file type
+    # ── Read raw DataFrame (no header) ──
     try:
-        if filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls"):
-            df = pd.read_excel(io.BytesIO(file_bytes))
+        if filename.lower().endswith((".xlsx", ".xls")):
+            df_raw = pd.read_excel(io.BytesIO(file_bytes), header=None)
         else:
             text = file_bytes.decode("utf-8-sig")
-            df = pd.read_csv(io.StringIO(text))
+            df_raw = pd.read_csv(io.StringIO(text), header=None)
     except Exception:
         return None
 
-    # Normalize column names for flexible matching
-    col_map = {}
+    # ── Detect header row ──
+    header_idx = _find_header_row(df_raw)
+    if header_idx is None:
+        # Fall back: maybe headers are in row 0 (simple flat file)
+        header_idx = 0
+
+    # Extract report date from rows above the header (if present)
+    report_date = datetime.now().strftime("%Y-%m-%d")
+    for i in range(header_idx):
+        cell = str(df_raw.iloc[i, 0]).strip()
+        if cell.lower().startswith("as of "):
+            # "As of February 27, 2026" → parse date
+            try:
+                report_date = datetime.strptime(
+                    cell.replace("As of ", "").strip(), "%B %d, %Y"
+                ).strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+
+    # Set column names from the header row
+    headers = [str(v).strip() for v in df_raw.iloc[header_idx]]
+    df_raw.columns = headers
+    df = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
+
+    # ── Build column index (flexible matching) ──
+    col_map: dict[str, str] = {}
     for col in df.columns:
-        cl = str(col).strip().lower()
-        if cl in ("name", "security name", "security", "description"):
+        cl = col.lower().strip()
+        if cl in ("security description", "name", "security name",
+                   "security", "description"):
             col_map["name"] = col
-        elif cl in ("ticker", "symbol", "ticker symbol"):
+        elif cl in ("symbol", "ticker", "ticker symbol"):
             col_map["ticker"] = col
-        elif cl in ("currency", "curr", "ccy"):
+        elif cl in ("security currency", "currency", "curr", "ccy"):
             col_map["currency"] = col
         elif cl in ("quantity", "shares", "units", "qty"):
             col_map["quantity"] = col
         elif cl in ("market value", "value", "mkt value", "market_value",
                      "mktval", "market val"):
             col_map["market_value"] = col
+        elif cl in ("average cost", "avg cost", "avg_cost", "cost"):
+            col_map["avg_cost"] = col
+        elif cl in ("book value", "book_value", "book val"):
+            col_map["book_value"] = col
+        elif cl in ("price",):
+            col_map["price"] = col
+        elif cl in ("% of portfolio", "pct_of_portfolio", "weight", "weight %"):
+            col_map["pct"] = col
+        elif cl in ("estimated annual income", "est annual income",
+                     "annual income", "income"):
+            col_map["est_income"] = col
+        elif cl in ("yield (%)", "yield", "yield_pct"):
+            col_map["yield"] = col
         elif cl in ("sector", "asset class", "gics sector"):
             col_map["sector"] = col
 
-    # Check required columns
-    required = ["name", "ticker", "quantity", "market_value"]
-    missing = [k for k in required if k not in col_map]
-    if missing:
+    # Must have at least ticker/symbol and market value
+    if "ticker" not in col_map or "market_value" not in col_map:
         return None
 
+    # ── Parse rows, tracking current section for sector ──
     holdings = []
+    current_section = "Other"
+
     for _, row in df.iterrows():
+        ticker_raw = str(row.get(col_map["ticker"], "")).strip()
+        desc = str(row.get(col_map.get("name", ""), "")).strip()
+
+        # Skip empty rows
+        if (not ticker_raw or ticker_raw == "nan") and (not desc or desc == "nan"):
+            continue
+
+        # Section header: no ticker, desc matches a known section
+        if (not ticker_raw or ticker_raw == "nan"):
+            # Check if it's a section header (not a "Total" row)
+            if not desc.startswith("Total") and desc != "nan":
+                if desc in SECTION_SECTOR_MAP:
+                    current_section = SECTION_SECTOR_MAP[desc]
+                elif desc.upper() == desc and len(desc) > 2:
+                    # All-caps section we don't have a mapping for
+                    current_section = "Other"
+            continue
+
+        # Skip "Total" rows that somehow have a symbol
+        if desc.startswith("Total"):
+            continue
+
+        # Skip cash-like rows
+        if ticker_raw.startswith("CASH-") or ticker_raw.startswith("DYN"):
+            continue
+
+        # Only include exchange-traded securities (skip CUSIPs, GIC codes, etc.)
+        # Exchange tickers end with -T, -N, -O, -P, -US, etc.
+        if not _has_exchange_suffix(ticker_raw):
+            continue
+
+        # ── Parse data row ──
         try:
-            ticker = str(row[col_map["ticker"]]).strip()
-            if not ticker or ticker == "nan":
+            mkt_val_str = str(row.get(col_map["market_value"], "0"))
+            mkt_val_str = mkt_val_str.replace(",", "").replace("$", "").replace("*", "")
+            market_value = float(mkt_val_str)
+            if market_value == 0:
                 continue
 
-            name = str(row[col_map["name"]]).strip()
-            quantity = float(
-                str(row[col_map["quantity"]]).replace(",", ""))
-            market_value = float(
-                str(row[col_map["market_value"]])
-                .replace(",", "").replace("$", ""))
+            qty_str = str(row.get(col_map["quantity"], "0"))
+            qty_str = qty_str.replace(",", "").replace("*", "")
+            quantity = float(qty_str)
 
+            # Convert broker ticker → yfinance ticker
+            ticker = convert_broker_ticker(ticker_raw)
+
+            # Currency
             currency = "USD"
             if "currency" in col_map:
-                curr = str(row[col_map["currency"]]).strip().upper()
-                if curr in ("CAD", "USD"):
+                curr = str(row.get(col_map["currency"], "")).strip().upper()
+                if curr in ("CAD", "USD", "EUR"):
                     currency = curr
 
-            sector = "Other"
+            # Sector: use column if available, otherwise inferred from section
+            sector = current_section
             if "sector" in col_map:
-                s = str(row[col_map["sector"]]).strip()
+                s = str(row.get(col_map["sector"], "")).strip()
                 if s and s != "nan":
                     sector = s
+
+            # Clean name
+            name = desc if desc and desc != "nan" else ticker
 
             holdings.append({
                 "name": name,
                 "ticker": ticker,
                 "currency": currency,
-                "quantity": int(quantity),
+                "quantity": round(quantity, 4) if quantity != int(quantity) else int(quantity),
                 "market_value": round(market_value),
                 "sector": sector,
             })
         except (ValueError, TypeError, KeyError):
             continue
 
-    return holdings if holdings else None
+    return (holdings, report_date) if holdings else None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -307,13 +448,12 @@ holdings_file = st.file_uploader(
 
 if holdings_file is not None:
     raw_bytes = holdings_file.read()
-    parsed = parse_holdings_file(raw_bytes, holdings_file.name)
+    result = parse_holdings_file(raw_bytes, holdings_file.name)
 
-    if parsed is None:
+    if result is None:
         st.error(
             "Could not parse holdings file. Please ensure it has columns like: "
-            "**Name**, **Ticker**, **Quantity**, **Market Value**. "
-            "Optional: Currency, Sector."
+            "**Symbol**, **Market Value**, **Quantity**."
         )
         # Show raw preview so user can see what we received
         st.caption("Raw file preview:")
@@ -323,12 +463,14 @@ if holdings_file is not None:
             else:
                 preview_df = pd.read_csv(
                     io.BytesIO(raw_bytes), encoding="utf-8-sig")
-            st.dataframe(preview_df.head(5), use_container_width=True)
+            st.dataframe(preview_df.head(10), use_container_width=True)
             st.caption(
                 f"Detected columns: {', '.join(str(c) for c in preview_df.columns.tolist())}")
         except Exception:
             pass
     else:
+        parsed, report_date = result
+
         # Show preview
         preview_df = pd.DataFrame(parsed)
         total_value = preview_df["market_value"].sum()
@@ -337,7 +479,8 @@ if holdings_file is not None:
         st.success(
             f"Parsed **{len(parsed)} positions** · "
             f"**${total_value:,.0f}** total · "
-            f"**{num_sectors} sectors**"
+            f"**{num_sectors} sectors** · "
+            f"Report date: **{report_date}**"
         )
 
         st.dataframe(
@@ -351,7 +494,6 @@ if holdings_file is not None:
         # Confirm import
         if st.button("Confirm Holdings Import", type="primary",
                       key="confirm_holdings"):
-            report_date = datetime.now().strftime("%Y-%m-%d")
             output = {
                 "_meta": {
                     "report_date": report_date,
