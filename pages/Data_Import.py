@@ -213,12 +213,12 @@ def consolidate_holdings(holdings: list[dict]) -> list[dict]:
         t = h["ticker"]
         base = None
 
-        # X.UN.TO → X  (e.g. BIP.UN.TO → BIP)
-        if t.endswith(".UN.TO"):
+        # X-UN.TO → X  (e.g. BIP-UN.TO → BIP)
+        if t.endswith("-UN.TO"):
             base = t[:-6]
         # X.TO → X  (e.g. RY.TO → RY) — but only simple X.TO, skip
-        # preferred-style tickers like ENB.B.TO (base would be "ENB.B")
-        elif t.endswith(".TO") and "." not in t[:-3]:
+        # preferred-style tickers like ENB-B.TO (base would be "ENB-B")
+        elif t.endswith(".TO") and "." not in t[:-3] and "-" not in t[:-3]:
             base = t[:-3]
 
         if base and base in ticker_idx:
@@ -226,15 +226,16 @@ def consolidate_holdings(holdings: list[dict]) -> list[dict]:
             if j == i or j in consumed:
                 continue
             other = merged[j]
-            # Keep whichever has larger market_value as primary
+            # Keep whichever has larger market_value as primary.
+            # Only sum market_value — do NOT sum quantities because
+            # CDRs and cross-listed shares have different unit prices
+            # (e.g. 78k AMZN.TO CDRs ≠ 78k AMZN shares).
             if abs(h["market_value"]) >= abs(other["market_value"]):
-                primary, secondary = h, other
+                h["market_value"] += other["market_value"]
                 consumed.add(j)
             else:
-                primary, secondary = other, h
+                other["market_value"] += h["market_value"]
                 consumed.add(i)
-            primary["market_value"] += secondary["market_value"]
-            primary["quantity"] += secondary["quantity"]
 
     # Also check the reverse: US ticker → X.TO  (catches cases where
     # the US listing appears first and the .TO hasn't been processed yet)
@@ -245,20 +246,19 @@ def consolidate_holdings(holdings: list[dict]) -> list[dict]:
         if "." in t:
             continue  # already a .TO/.V/etc.
         # Check if X.TO or X.UN.TO exists
-        for suffix in [".TO", ".UN.TO"]:
+        for suffix in [".TO", "-UN.TO"]:
             partner = t + suffix
             if partner in ticker_idx:
                 j = ticker_idx[partner]
                 if j == i or j in consumed:
                     continue
                 other = merged[j]
+                # Only sum market_value, keep primary's quantity
                 if abs(h["market_value"]) >= abs(other["market_value"]):
                     h["market_value"] += other["market_value"]
-                    h["quantity"] += other["quantity"]
                     consumed.add(j)
                 else:
                     other["market_value"] += h["market_value"]
-                    other["quantity"] += h["quantity"]
                     consumed.add(i)
                 break
 
@@ -287,14 +287,15 @@ def convert_broker_ticker(raw: str) -> str:
     """Convert broker symbol to yfinance ticker.
 
     Examples:  GOOGL-O → GOOGL,  BMO-T → BMO.TO,  V-N → V,  ZQQ-T → ZQQ.TO
-    Handles apostrophe tickers like BGU'U-T → BGU-U.TO
+    Handles:  BGU'U-T → BGU-U.TO,  BIP.UN-T → BIP-UN.TO
     """
     raw = raw.strip()
     for suffix, replacement in TICKER_SUFFIX_MAP.items():
         if raw.endswith(suffix):
             base = raw[: -len(suffix)]
-            # Replace apostrophes with hyphens (e.g. BGU'U → BGU-U)
-            base = base.replace("'", "-")
+            # Replace apostrophes and dots with hyphens for yfinance
+            # e.g. BGU'U → BGU-U,  BIP.UN → BIP-UN
+            base = base.replace("'", "-").replace(".", "-")
             return base + replacement
     return raw
 
@@ -391,7 +392,14 @@ def parse_holdings_file(file_bytes: bytes, filename: str) -> tuple[list[dict], s
     if "ticker" not in col_map or "market_value" not in col_map:
         return None
 
-    # ── Parse rows, tracking current section for sector ──
+    # ── Build existing sector lookup from current holdings.json ──
+    existing_sectors: dict[str, str] = {}
+    existing_data = load_current_holdings()
+    if existing_data:
+        for h in existing_data.get("holdings", []):
+            existing_sectors[h["ticker"]] = h.get("sector", "Other")
+
+    # ── Parse rows, tracking current section for fallback sector ──
     holdings = []
     current_section = "Other"
 
@@ -449,12 +457,9 @@ def parse_holdings_file(file_bytes: bytes, filename: str) -> tuple[list[dict], s
                 if curr in ("CAD", "USD", "EUR"):
                     currency = curr
 
-            # Sector: use column if available, otherwise inferred from section
-            sector = current_section
-            if "sector" in col_map:
-                s = str(row.get(col_map["sector"], "")).strip()
-                if s and s != "nan":
-                    sector = s
+            # Sector: prefer existing holdings.json designation,
+            # fall back to broker section mapping for new tickers
+            sector = existing_sectors.get(ticker, current_section)
 
             # Clean name
             name = desc if desc and desc != "nan" else ticker
