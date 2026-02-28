@@ -2,12 +2,10 @@
 ================================================================================
  DATA IMPORT PAGE
  ────────────────
- Upload holdings CSVs and model portfolio CSVs to update the dashboard data.
- Provides preview, validation, and one-click import.
+ Upload holdings (CSV/Excel) and edit model portfolios in-app.
 ================================================================================
 """
 
-import csv
 import io
 import json
 import re
@@ -25,12 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 HOLDINGS_FILE = BASE_DIR / "holdings.json"
 MODELS_DIR = BASE_DIR / "models"
 
-# Ticker suffix mapping (same as convert_model.py)
-SUFFIX_MAP = {
-    "-T": ".TO",   # TSX
-    "-N": "",      # NYSE
-    "-O": "",      # NASDAQ
-}
+SECTOR_OPTIONS = [
+    "Financials", "Technology", "Energy", "Utilities", "Industrials",
+    "Healthcare", "Consumer Staples", "Consumer Discretionary",
+    "Real Estate", "Telecommunications", "Commodities",
+    "Digital Assets", "ETF - Equity", "Other",
+]
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CSS
@@ -98,24 +96,13 @@ footer {visibility: hidden;}
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def convert_ticker(raw: str) -> str:
-    """Convert 'ARE-T' -> 'ARE.TO', 'GOOGL-O' -> 'GOOGL', etc."""
-    raw = raw.strip()
-    for suffix, replacement in SUFFIX_MAP.items():
-        if raw.endswith(suffix):
-            base = raw[: -len(suffix)]
-            return base + replacement
-    return raw
-
-
 def load_current_holdings() -> dict | None:
-    """Load current holdings.json metadata."""
+    """Load current holdings.json."""
     if not HOLDINGS_FILE.exists():
         return None
     try:
         with open(HOLDINGS_FILE, "r") as f:
-            data = json.load(f)
-        return data
+            return json.load(f)
     except Exception:
         return None
 
@@ -131,6 +118,7 @@ def load_current_models() -> list[dict]:
                 data = json.load(f)
             meta = data.get("_meta", {})
             meta["_file"] = fpath.name
+            meta["_path"] = str(fpath)
             meta["_num"] = len(data.get("constituents", []))
             models.append(meta)
         except Exception:
@@ -138,95 +126,30 @@ def load_current_models() -> list[dict]:
     return models
 
 
-def enrich_constituents(constituents: list[dict]) -> list[dict]:
-    """Add sector and currency to model constituents using holdings lookup."""
-    # Build lookup from holdings
-    holdings_lookup = {}
+def load_model_data(filepath: str) -> tuple[dict, list[dict]]:
+    """Load full model data (meta + constituents) from a JSON file."""
+    with open(filepath, "r", encoding="utf-8-sig") as f:
+        data = json.load(f)
+    return data.get("_meta", {}), data.get("constituents", [])
+
+
+def enrich_row(ticker: str) -> dict:
+    """Enrich a single ticker with sector/currency from holdings."""
     hdata = load_current_holdings()
     if hdata:
         for h in hdata.get("holdings", []):
-            holdings_lookup[h["ticker"]] = {
-                "sector": h.get("sector", "Other"),
-                "currency": h.get("currency", "USD"),
-            }
-
-    for c in constituents:
-        ticker = c["ticker"]
-        # Tier 1: from holdings
-        if ticker in holdings_lookup:
-            c["sector"] = holdings_lookup[ticker]["sector"]
-            c["currency"] = holdings_lookup[ticker]["currency"]
-        else:
-            # Tier 2: infer
-            c["currency"] = "CAD" if ticker.endswith(".TO") else "USD"
-            c["sector"] = "Other"
-
-    return constituents
+            if h["ticker"] == ticker:
+                return {"sector": h.get("sector", "Other"),
+                        "currency": h.get("currency", "USD")}
+    # Fallback
+    return {
+        "sector": "Other",
+        "currency": "CAD" if ticker.endswith(".TO") else "USD",
+    }
 
 
-def parse_model_csv(file_bytes: bytes) -> tuple[list[dict], float, str]:
-    """Parse a model CSV and return (constituents, cash_pct, model_name).
-
-    Reuses logic from convert_model.py.
-    """
-    text = file_bytes.decode("utf-8-sig")
-    reader = csv.reader(io.StringIO(text))
-
-    constituents = []
-    cash_pct = 0.0
-    model_name = ""
-
-    for row in reader:
-        if not row:
-            continue
-
-        # Model name from first non-header data row
-        if row[0].strip() and row[0].strip() != "Name" and not model_name:
-            model_name = row[0].strip()
-
-        # Cash row
-        if len(row) >= 5 and row[1].strip() == "Currency/Cash":
-            try:
-                cash_pct = float(row[4].strip())
-            except (ValueError, IndexError):
-                pass
-            continue
-
-        # Equity rows
-        if len(row) < 5 or not row[3].strip():
-            continue
-        raw_ticker = row[3].strip()
-        if raw_ticker == "Ticker":
-            continue
-
-        name = row[2].strip()
-        try:
-            tgt_pct = float(row[4].strip())
-        except (ValueError, IndexError):
-            continue
-        if tgt_pct == 0:
-            continue
-
-        yf_ticker = convert_ticker(raw_ticker)
-        exchange = (
-            "TSX" if raw_ticker.endswith("-T")
-            else "NASDAQ" if raw_ticker.endswith("-O")
-            else "NYSE"
-        )
-
-        constituents.append({
-            "name": name,
-            "ticker": yf_ticker,
-            "raw_ticker": raw_ticker,
-            "exchange": exchange,
-            "target_pct": tgt_pct,
-        })
-
-    return constituents, cash_pct, model_name
-
-
-def parse_holdings_csv(file_bytes: bytes) -> list[dict] | None:
-    """Parse a holdings CSV from broker export.
+def parse_holdings_file(file_bytes: bytes, filename: str) -> list[dict] | None:
+    """Parse a holdings file (CSV or Excel) from broker export.
 
     Expected columns (flexible matching):
       - Name / Security Name
@@ -238,13 +161,20 @@ def parse_holdings_csv(file_bytes: bytes) -> list[dict] | None:
 
     Returns list of holdings dicts or None if parsing fails.
     """
-    text = file_bytes.decode("utf-8-sig")
-    df = pd.read_csv(io.StringIO(text))
+    # Read into DataFrame based on file type
+    try:
+        if filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls"):
+            df = pd.read_excel(io.BytesIO(file_bytes))
+        else:
+            text = file_bytes.decode("utf-8-sig")
+            df = pd.read_csv(io.StringIO(text))
+    except Exception:
+        return None
 
     # Normalize column names for flexible matching
     col_map = {}
     for col in df.columns:
-        cl = col.strip().lower()
+        cl = str(col).strip().lower()
         if cl in ("name", "security name", "security", "description"):
             col_map["name"] = col
         elif cl in ("ticker", "symbol", "ticker symbol"):
@@ -253,7 +183,8 @@ def parse_holdings_csv(file_bytes: bytes) -> list[dict] | None:
             col_map["currency"] = col
         elif cl in ("quantity", "shares", "units", "qty"):
             col_map["quantity"] = col
-        elif cl in ("market value", "value", "mkt value", "market_value", "mktval"):
+        elif cl in ("market value", "value", "mkt value", "market_value",
+                     "mktval", "market val"):
             col_map["market_value"] = col
         elif cl in ("sector", "asset class", "gics sector"):
             col_map["sector"] = col
@@ -272,8 +203,11 @@ def parse_holdings_csv(file_bytes: bytes) -> list[dict] | None:
                 continue
 
             name = str(row[col_map["name"]]).strip()
-            quantity = float(str(row[col_map["quantity"]]).replace(",", ""))
-            market_value = float(str(row[col_map["market_value"]]).replace(",", "").replace("$", ""))
+            quantity = float(
+                str(row[col_map["quantity"]]).replace(",", ""))
+            market_value = float(
+                str(row[col_map["market_value"]])
+                .replace(",", "").replace("$", ""))
 
             currency = "USD"
             if "currency" in col_map:
@@ -309,7 +243,7 @@ st.set_page_config(page_title="Data Import", page_icon="📤", layout="wide")
 st.markdown(PAGE_CSS, unsafe_allow_html=True)
 
 st.markdown("# 📤 Data Import")
-st.caption("Upload holdings and model portfolio CSVs to update your dashboard data.")
+st.caption("Upload holdings and edit model portfolios to update your dashboard.")
 
 # ── Current data status ──
 hdata = load_current_holdings()
@@ -365,28 +299,33 @@ st.markdown('<div class="section-header">Upload Holdings</div>',
             unsafe_allow_html=True)
 
 holdings_file = st.file_uploader(
-    "Drag & drop your broker holdings CSV",
-    type=["csv"],
+    "Drag & drop your broker holdings export (CSV or Excel)",
+    type=["csv", "xlsx", "xls"],
     key="holdings_upload",
-    help="CSV should have columns: Name, Ticker, Currency, Quantity, Market Value, Sector",
+    help="Columns: Name, Ticker, Currency, Quantity, Market Value, Sector",
 )
 
 if holdings_file is not None:
     raw_bytes = holdings_file.read()
-    parsed = parse_holdings_csv(raw_bytes)
+    parsed = parse_holdings_file(raw_bytes, holdings_file.name)
 
     if parsed is None:
         st.error(
-            "Could not parse holdings CSV. Please ensure it has columns like: "
+            "Could not parse holdings file. Please ensure it has columns like: "
             "**Name**, **Ticker**, **Quantity**, **Market Value**. "
             "Optional: Currency, Sector."
         )
         # Show raw preview so user can see what we received
-        st.caption("Raw CSV preview:")
+        st.caption("Raw file preview:")
         try:
-            preview_df = pd.read_csv(io.BytesIO(raw_bytes), encoding="utf-8-sig")
+            if holdings_file.name.lower().endswith((".xlsx", ".xls")):
+                preview_df = pd.read_excel(io.BytesIO(raw_bytes))
+            else:
+                preview_df = pd.read_csv(
+                    io.BytesIO(raw_bytes), encoding="utf-8-sig")
             st.dataframe(preview_df.head(5), use_container_width=True)
-            st.caption(f"Detected columns: {', '.join(preview_df.columns.tolist())}")
+            st.caption(
+                f"Detected columns: {', '.join(str(c) for c in preview_df.columns.tolist())}")
         except Exception:
             pass
     else:
@@ -402,14 +341,15 @@ if holdings_file is not None:
         )
 
         st.dataframe(
-            preview_df[["ticker", "name", "currency", "quantity", "market_value", "sector"]],
+            preview_df[["ticker", "name", "currency", "quantity",
+                         "market_value", "sector"]],
             use_container_width=True,
             height=300,
             hide_index=True,
         )
 
         # Confirm import
-        if st.button("✅ Confirm Holdings Import", type="primary",
+        if st.button("Confirm Holdings Import", type="primary",
                       key="confirm_holdings"):
             report_date = datetime.now().strftime("%Y-%m-%d")
             output = {
@@ -431,107 +371,234 @@ if holdings_file is not None:
 st.markdown("---")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECTION 2 — MODEL IMPORT
+# SECTION 2 — MODEL EDITOR
 # ══════════════════════════════════════════════════════════════════════════════
 
-st.markdown('<div class="section-header">Upload Model Portfolio</div>',
+st.markdown('<div class="section-header">Edit Model Portfolio</div>',
             unsafe_allow_html=True)
 
-model_col1, model_col2 = st.columns([1, 2])
+# ── Model selector ──
+model_options = ["➕ Create New Model"] + [
+    m.get("tab_name", m.get("model_name", m["_file"]))
+    for m in models_info
+]
 
-with model_col1:
+selected_model = st.selectbox(
+    "Select model to edit",
+    options=model_options,
+    key="model_selector",
+)
+
+is_new = selected_model == "➕ Create New Model"
+
+# ── Load existing model or start fresh ──
+if is_new:
+    editor_df = pd.DataFrame(columns=[
+        "ticker", "name", "target_pct", "sector", "currency",
+    ])
+    current_tab_name = ""
+    current_cash = 0.0
+    current_model_name = ""
+    current_file = None
+else:
+    # Find the matching model
+    model_meta = None
+    for m in models_info:
+        if m.get("tab_name", m.get("model_name", m["_file"])) == selected_model:
+            model_meta = m
+            break
+
+    if model_meta:
+        meta, constituents = load_model_data(model_meta["_path"])
+        editor_df = pd.DataFrame(constituents)
+        # Ensure required columns exist
+        for col in ["ticker", "name", "target_pct", "sector", "currency"]:
+            if col not in editor_df.columns:
+                editor_df[col] = ""
+        editor_df = editor_df[["ticker", "name", "target_pct", "sector", "currency"]]
+        current_tab_name = meta.get("tab_name", "")
+        current_cash = meta.get("cash_pct", 0.0)
+        current_model_name = meta.get("model_name", "")
+        current_file = model_meta["_file"]
+    else:
+        editor_df = pd.DataFrame(columns=[
+            "ticker", "name", "target_pct", "sector", "currency",
+        ])
+        current_tab_name = ""
+        current_cash = 0.0
+        current_model_name = ""
+        current_file = None
+
+# ── Tab name and cash % ──
+name_col, cash_col = st.columns([2, 1])
+
+with name_col:
     tab_name = st.text_input(
         "Model tab name",
+        value=current_tab_name,
         placeholder="e.g. NA Div Model",
-        help="Short name that appears as a tab on the dashboard",
+        help="Short name shown as a tab on the dashboard",
+        key="editor_tab_name",
     )
 
-with model_col2:
-    model_file = st.file_uploader(
-        "Drag & drop model CSV",
-        type=["csv"],
-        key="model_upload",
-        help="CSV with columns: Name, Ticker (col 3), Target % (col 4)",
+with cash_col:
+    cash_pct = st.number_input(
+        "Cash %",
+        value=current_cash,
+        min_value=0.0,
+        max_value=100.0,
+        step=0.25,
+        format="%.2f",
+        key="editor_cash_pct",
     )
 
-if model_file is not None:
-    raw_bytes = model_file.read()
+# ── Editable table ──
+edited_df = st.data_editor(
+    editor_df,
+    num_rows="dynamic",
+    use_container_width=True,
+    height=450,
+    key="model_editor",
+    column_config={
+        "ticker": st.column_config.TextColumn(
+            "Ticker",
+            help="yfinance ticker (e.g. GOOGL, RY.TO)",
+            width="small",
+        ),
+        "name": st.column_config.TextColumn(
+            "Name",
+            help="Security name",
+            width="medium",
+        ),
+        "target_pct": st.column_config.NumberColumn(
+            "Target %",
+            help="Target allocation percentage",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.05,
+            format="%.2f",
+            width="small",
+        ),
+        "sector": st.column_config.SelectboxColumn(
+            "Sector",
+            options=SECTOR_OPTIONS,
+            width="medium",
+        ),
+        "currency": st.column_config.SelectboxColumn(
+            "Currency",
+            options=["CAD", "USD"],
+            width="small",
+        ),
+    },
+)
 
-    try:
-        constituents, cash_pct, model_name = parse_model_csv(raw_bytes)
-    except Exception as e:
-        st.error(f"Error parsing model CSV: {e}")
-        constituents = []
+# ── Summary stats ──
+valid_rows = edited_df.dropna(subset=["ticker"])
+valid_rows = valid_rows[valid_rows["ticker"].str.strip() != ""]
+total_equity = valid_rows["target_pct"].sum() if not valid_rows.empty else 0.0
+num_constituents = len(valid_rows)
 
-    if not constituents:
-        st.error("No constituents found in the CSV. Check the format.")
-        # Show raw preview
-        st.caption("Raw CSV preview:")
-        try:
-            preview_df = pd.read_csv(io.BytesIO(raw_bytes), encoding="utf-8-sig")
-            st.dataframe(preview_df.head(5), use_container_width=True)
-        except Exception:
-            pass
+st.caption(
+    f"**{num_constituents} constituents** · "
+    f"**{total_equity:.2f}% equity** · "
+    f"**{cash_pct:.2f}% cash** · "
+    f"**{total_equity + cash_pct:.2f}% total**"
+)
+
+if abs(total_equity + cash_pct - 100.0) > 0.5:
+    st.warning(
+        f"Total allocation is {total_equity + cash_pct:.2f}% "
+        f"(expected ~100%). Adjust target percentages or cash."
+    )
+
+# ── Save / Delete buttons ──
+btn_col1, btn_col2, btn_spacer = st.columns([1, 1, 2])
+
+with btn_col1:
+    save_clicked = st.button(
+        "Save Model", type="primary", key="save_model",
+        disabled=(num_constituents == 0),
+    )
+
+with btn_col2:
+    if not is_new and current_file:
+        delete_clicked = st.button(
+            "Delete Model", type="secondary", key="delete_model",
+        )
     else:
-        # Enrich with sector/currency
-        constituents = enrich_constituents(constituents)
+        delete_clicked = False
 
-        total_equity = round(sum(c["target_pct"] for c in constituents), 2)
-        preview_df = pd.DataFrame(constituents)
+# ── Save logic ──
+if save_clicked:
+    effective_tab = tab_name.strip() if tab_name and tab_name.strip() else ""
+    if not effective_tab:
+        st.error("Please enter a model tab name.")
+    elif num_constituents == 0:
+        st.error("Add at least one constituent.")
+    else:
+        # Build constituents list, auto-enrich missing sector/currency
+        constituents = []
+        for _, row in valid_rows.iterrows():
+            ticker = str(row["ticker"]).strip()
+            name = str(row.get("name", "")).strip()
+            target = float(row.get("target_pct", 0))
+            sector = str(row.get("sector", "")).strip()
+            currency = str(row.get("currency", "")).strip()
 
-        # Count unmatched sectors
-        unmatched = preview_df[preview_df["sector"] == "Other"]
+            # Auto-enrich if sector/currency missing
+            if not sector or sector in ("", "nan", "None"):
+                enriched = enrich_row(ticker)
+                sector = enriched["sector"]
+            if not currency or currency in ("", "nan", "None"):
+                enriched = enrich_row(ticker)
+                currency = enriched["currency"]
 
-        st.success(
-            f"Parsed **{len(constituents)} constituents** · "
-            f"**{total_equity}% equity** · **{cash_pct}% cash** · "
-            f"Model: {model_name}"
-        )
+            constituents.append({
+                "name": name,
+                "ticker": ticker,
+                "target_pct": round(target, 2),
+                "sector": sector,
+                "currency": currency,
+            })
 
-        if not unmatched.empty:
-            st.warning(
-                f"{len(unmatched)} ticker(s) not found in current holdings — "
-                f"sector set to 'Other': {', '.join(unmatched['ticker'].tolist())}"
-            )
-
-        st.dataframe(
-            preview_df[["ticker", "name", "target_pct", "sector", "currency"]],
-            use_container_width=True,
-            height=300,
-            hide_index=True,
-        )
-
-        # Determine output filename
-        effective_tab = tab_name.strip() if tab_name and tab_name.strip() else model_name
-        if not effective_tab:
-            effective_tab = "imported_model"
         slug = re.sub(r"[^a-z0-9]+", "_", effective_tab.lower()).strip("_")
         out_path = MODELS_DIR / f"{slug}.json"
+        MODELS_DIR.mkdir(exist_ok=True)
 
-        # Check if overwriting
-        if out_path.exists():
-            st.info(f"This will **overwrite** `{out_path.name}`")
+        output = {
+            "_meta": {
+                "last_updated": datetime.now().strftime("%Y-%m-%d"),
+                "source": "Edited in dashboard",
+                "model_name": current_model_name or effective_tab,
+                "tab_name": effective_tab,
+                "total_equity_pct": round(total_equity, 2),
+                "cash_pct": round(cash_pct, 2),
+                "num_constituents": num_constituents,
+            },
+            "constituents": constituents,
+        }
 
-        if st.button("✅ Confirm Model Import", type="primary",
-                      key="confirm_model"):
-            if not effective_tab:
-                st.error("Please enter a model tab name.")
-            else:
-                MODELS_DIR.mkdir(exist_ok=True)
-                output = {
-                    "_meta": {
-                        "last_updated": datetime.now().strftime("%Y-%m-%d"),
-                        "source": f"Imported from {model_file.name}",
-                        "model_name": model_name or effective_tab,
-                        "tab_name": effective_tab,
-                        "total_equity_pct": total_equity,
-                        "cash_pct": cash_pct,
-                        "num_constituents": len(constituents),
-                    },
-                    "constituents": constituents,
-                }
-                with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump(output, f, indent=2)
-                st.cache_data.clear()
-                st.success(f"Saved {len(constituents)} constituents to {out_path.name}")
-                st.balloons()
+        # If renaming, delete old file
+        if current_file and current_file != f"{slug}.json":
+            old_path = MODELS_DIR / current_file
+            if old_path.exists():
+                old_path.unlink()
+
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(output, f, indent=2)
+
+        st.cache_data.clear()
+        st.success(
+            f"Saved **{effective_tab}** — "
+            f"{num_constituents} constituents to `{out_path.name}`"
+        )
+        st.balloons()
+
+# ── Delete logic ──
+if delete_clicked and current_file:
+    del_path = MODELS_DIR / current_file
+    if del_path.exists():
+        del_path.unlink()
+        st.cache_data.clear()
+        st.success(f"Deleted `{current_file}`")
+        st.rerun()
