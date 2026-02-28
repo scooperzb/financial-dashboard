@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py holdings.json ./
 COPY .streamlit/ .streamlit/
 COPY models/ models/
+COPY pages/ pages/
 
 EXPOSE 8501
 
