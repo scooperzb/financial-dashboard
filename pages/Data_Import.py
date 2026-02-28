@@ -37,6 +37,9 @@ TICKER_SUFFIX_MAP = {
     "-O":  "",      # NASDAQ
     "-P":  "",      # NYSE Arca / other
     "-US": "",      # US OTC
+    "-5":  "",      # Composite / OTC (e.g. NSRGY-5, LVMUY-5)
+    "-I":  "",      # US exchange (e.g. ITA-I)
+    "-GD": "",      # Globally diversified / misc ETFs
     "-V":  ".V",    # TSX Venture
     "-CT": ".TO",   # TSX (alternate)
     "-CF": ".TO",   # TSX (alternate)
@@ -182,16 +185,14 @@ def enrich_row(ticker: str) -> dict:
 
 
 def consolidate_holdings(holdings: list[dict]) -> list[dict]:
-    """Consolidate holdings: merge same-ticker rows and cross-listed pairs.
+    """Consolidate same-ticker rows (long + short netting).
 
-    1. Same-ticker: sums quantity and market_value (handles long+short).
-    2. Cross-listings: merges X.TO ↔ X and X.UN.TO ↔ X pairs into the
-       primary (largest market_value) row.  Skips .V tickers to avoid
-       false positives (venture-exchange stocks ≠ US tickers).
+    Sums quantity and market_value for identical tickers.
+    Cross-listed pairs (X.TO ↔ X) are kept separate to preserve
+    correct currency exposure and sector allocations.
     """
     from collections import OrderedDict
 
-    # ── Step 1: consolidate identical tickers ──
     by_ticker: OrderedDict[str, dict] = OrderedDict()
     for h in holdings:
         t = h["ticker"]
@@ -201,75 +202,11 @@ def consolidate_holdings(holdings: list[dict]) -> list[dict]:
         else:
             by_ticker[t] = dict(h)  # copy
 
-    merged = list(by_ticker.values())
-
-    # ── Step 2: merge cross-listed .TO ↔ US pairs ──
-    ticker_idx = {h["ticker"]: i for i, h in enumerate(merged)}
-    consumed: set[int] = set()  # indices already merged into another row
-
-    for i, h in enumerate(merged):
-        if i in consumed:
-            continue
-        t = h["ticker"]
-        base = None
-
-        # X-UN.TO → X  (e.g. BIP-UN.TO → BIP)
-        if t.endswith("-UN.TO"):
-            base = t[:-6]
-        # X.TO → X  (e.g. RY.TO → RY) — but only simple X.TO, skip
-        # preferred-style tickers like ENB-B.TO (base would be "ENB-B")
-        elif t.endswith(".TO") and "." not in t[:-3] and "-" not in t[:-3]:
-            base = t[:-3]
-
-        if base and base in ticker_idx:
-            j = ticker_idx[base]
-            if j == i or j in consumed:
-                continue
-            other = merged[j]
-            # Keep whichever has larger market_value as primary.
-            # Only sum market_value — do NOT sum quantities because
-            # CDRs and cross-listed shares have different unit prices
-            # (e.g. 78k AMZN.TO CDRs ≠ 78k AMZN shares).
-            if abs(h["market_value"]) >= abs(other["market_value"]):
-                h["market_value"] += other["market_value"]
-                consumed.add(j)
-            else:
-                other["market_value"] += h["market_value"]
-                consumed.add(i)
-
-    # Also check the reverse: US ticker → X.TO  (catches cases where
-    # the US listing appears first and the .TO hasn't been processed yet)
-    for i, h in enumerate(merged):
-        if i in consumed:
-            continue
-        t = h["ticker"]
-        if "." in t:
-            continue  # already a .TO/.V/etc.
-        # Check if X.TO or X.UN.TO exists
-        for suffix in [".TO", "-UN.TO"]:
-            partner = t + suffix
-            if partner in ticker_idx:
-                j = ticker_idx[partner]
-                if j == i or j in consumed:
-                    continue
-                other = merged[j]
-                # Only sum market_value, keep primary's quantity
-                if abs(h["market_value"]) >= abs(other["market_value"]):
-                    h["market_value"] += other["market_value"]
-                    consumed.add(j)
-                else:
-                    other["market_value"] += h["market_value"]
-                    consumed.add(i)
-                break
-
     # Drop zero/tiny positions after netting
     result = []
-    for i, h in enumerate(merged):
-        if i in consumed:
-            continue
+    for h in by_ticker.values():
         if abs(h["market_value"]) < 1:
             continue
-        # Round cleaned-up values
         h["market_value"] = round(h["market_value"])
         q = h["quantity"]
         h["quantity"] = round(q, 4) if q != int(q) else int(q)
