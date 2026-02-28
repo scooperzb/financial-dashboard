@@ -181,6 +181,103 @@ def enrich_row(ticker: str) -> dict:
     }
 
 
+def consolidate_holdings(holdings: list[dict]) -> list[dict]:
+    """Consolidate holdings: merge same-ticker rows and cross-listed pairs.
+
+    1. Same-ticker: sums quantity and market_value (handles long+short).
+    2. Cross-listings: merges X.TO ↔ X and X.UN.TO ↔ X pairs into the
+       primary (largest market_value) row.  Skips .V tickers to avoid
+       false positives (venture-exchange stocks ≠ US tickers).
+    """
+    from collections import OrderedDict
+
+    # ── Step 1: consolidate identical tickers ──
+    by_ticker: OrderedDict[str, dict] = OrderedDict()
+    for h in holdings:
+        t = h["ticker"]
+        if t in by_ticker:
+            by_ticker[t]["quantity"] += h["quantity"]
+            by_ticker[t]["market_value"] += h["market_value"]
+        else:
+            by_ticker[t] = dict(h)  # copy
+
+    merged = list(by_ticker.values())
+
+    # ── Step 2: merge cross-listed .TO ↔ US pairs ──
+    ticker_idx = {h["ticker"]: i for i, h in enumerate(merged)}
+    consumed: set[int] = set()  # indices already merged into another row
+
+    for i, h in enumerate(merged):
+        if i in consumed:
+            continue
+        t = h["ticker"]
+        base = None
+
+        # X.UN.TO → X  (e.g. BIP.UN.TO → BIP)
+        if t.endswith(".UN.TO"):
+            base = t[:-6]
+        # X.TO → X  (e.g. RY.TO → RY) — but only simple X.TO, skip
+        # preferred-style tickers like ENB.B.TO (base would be "ENB.B")
+        elif t.endswith(".TO") and "." not in t[:-3]:
+            base = t[:-3]
+
+        if base and base in ticker_idx:
+            j = ticker_idx[base]
+            if j == i or j in consumed:
+                continue
+            other = merged[j]
+            # Keep whichever has larger market_value as primary
+            if abs(h["market_value"]) >= abs(other["market_value"]):
+                primary, secondary = h, other
+                consumed.add(j)
+            else:
+                primary, secondary = other, h
+                consumed.add(i)
+            primary["market_value"] += secondary["market_value"]
+            primary["quantity"] += secondary["quantity"]
+
+    # Also check the reverse: US ticker → X.TO  (catches cases where
+    # the US listing appears first and the .TO hasn't been processed yet)
+    for i, h in enumerate(merged):
+        if i in consumed:
+            continue
+        t = h["ticker"]
+        if "." in t:
+            continue  # already a .TO/.V/etc.
+        # Check if X.TO or X.UN.TO exists
+        for suffix in [".TO", ".UN.TO"]:
+            partner = t + suffix
+            if partner in ticker_idx:
+                j = ticker_idx[partner]
+                if j == i or j in consumed:
+                    continue
+                other = merged[j]
+                if abs(h["market_value"]) >= abs(other["market_value"]):
+                    h["market_value"] += other["market_value"]
+                    h["quantity"] += other["quantity"]
+                    consumed.add(j)
+                else:
+                    other["market_value"] += h["market_value"]
+                    other["quantity"] += h["quantity"]
+                    consumed.add(i)
+                break
+
+    # Drop zero/tiny positions after netting
+    result = []
+    for i, h in enumerate(merged):
+        if i in consumed:
+            continue
+        if abs(h["market_value"]) < 1:
+            continue
+        # Round cleaned-up values
+        h["market_value"] = round(h["market_value"])
+        q = h["quantity"]
+        h["quantity"] = round(q, 4) if q != int(q) else int(q)
+        result.append(h)
+
+    return result
+
+
 def _has_exchange_suffix(raw: str) -> bool:
     """Check if a broker symbol has a recognized exchange suffix."""
     return any(raw.endswith(sfx) for sfx in TICKER_SUFFIX_MAP)
@@ -373,7 +470,13 @@ def parse_holdings_file(file_bytes: bytes, filename: str) -> tuple[list[dict], s
         except (ValueError, TypeError, KeyError):
             continue
 
-    return (holdings, report_date) if holdings else None
+    if not holdings:
+        return None
+
+    # Consolidate: merge same-ticker rows and cross-listed pairs
+    holdings = consolidate_holdings(holdings)
+
+    return (holdings, report_date)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
