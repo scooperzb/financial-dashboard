@@ -10,42 +10,264 @@
     "num_constituents": 33
   },
   "constituents": [
-    {"name": "ABBVIE INC", "ticker": "ABBV", "target_pct": 3.0},
-    {"name": "ALIMENTATION COUCHE-TARD INC", "ticker": "ATD.TO", "target_pct": 4.0},
-    {"name": "ALPHABET INC CLASS A", "ticker": "GOOGL", "target_pct": 3.5},
-    {"name": "AMAZON.COM INC", "ticker": "AMZN", "target_pct": 3.0},
-    {"name": "APPLE INC", "ticker": "AAPL", "target_pct": 2.35},
-    {"name": "ATKINSREALIS GROUP INC", "ticker": "ATRL.TO", "target_pct": 3.0},
-    {"name": "BANK OF NOVA SCOTIA", "ticker": "BNS.TO", "target_pct": 4.0},
-    {"name": "BCE INC", "ticker": "BCE.TO", "target_pct": 1.5},
-    {"name": "BROOKFIELD INFRASTRUCTURE CORP", "ticker": "BIPC.TO", "target_pct": 3.0},
-    {"name": "BROOKFIELD INFRASTRUCTURE PARTNERS LP", "ticker": "BIP-UN.TO", "target_pct": 3.0},
-    {"name": "BROOKFIELD RENEWABLE CORP", "ticker": "BEPC.TO", "target_pct": 4.0},
-    {"name": "CANADIAN NATIONAL RAILWAY CO", "ticker": "CNR.TO", "target_pct": 3.0},
-    {"name": "COCA-COLA COMPANY", "ticker": "KO", "target_pct": 3.0},
-    {"name": "COSTCO WHOLESALE CORP", "ticker": "COST", "target_pct": 1.0},
-    {"name": "DOLLARAMA INC", "ticker": "DOL.TO", "target_pct": 4.0},
-    {"name": "ENBRIDGE INC", "ticker": "ENB.TO", "target_pct": 4.0},
-    {"name": "GENERAL DYNAMICS CORP", "ticker": "GD", "target_pct": 2.0},
-    {"name": "HONEYWELL INTL INC", "ticker": "HON", "target_pct": 2.0},
-    {"name": "JOHNSON & JOHNSON", "ticker": "JNJ", "target_pct": 2.0},
-    {"name": "LVMH MOET HENNESSY LOUIS VUITTON ADR", "ticker": "LVMUY", "target_pct": 1.5},
-    {"name": "MCDONALDS CORP", "ticker": "MCD", "target_pct": 2.0},
-    {"name": "META PLATFORMS INC", "ticker": "META", "target_pct": 3.5},
-    {"name": "MICROSOFT CORP", "ticker": "MSFT", "target_pct": 3.0},
-    {"name": "NESTLE SA ADR", "ticker": "NSRGY", "target_pct": 2.0},
-    {"name": "PREMIUM BRANDS HOLDINGS CORP", "ticker": "PBH.TO", "target_pct": 0.65},
-    {"name": "ROYAL BANK OF CANADA", "ticker": "RY.TO", "target_pct": 4.0},
-    {"name": "SIENNA SENIOR LIVING INC", "ticker": "SIA.TO", "target_pct": 4.0},
-    {"name": "STELLA-JONES INC", "ticker": "SJ.TO", "target_pct": 1.5},
-    {"name": "STRYKER CORP", "ticker": "SYK", "target_pct": 2.0},
-    {"name": "SUNCOR ENERGY INC", "ticker": "SU.TO", "target_pct": 2.0},
-    {"name": "TC ENERGY CORP", "ticker": "TRP.TO", "target_pct": 3.0},
-    {"name": "TELUS CORPORATION", "ticker": "T.TO", "target_pct": 4.0},
-    {"name": "TORONTO-DOMINION BANK", "ticker": "TD.TO", "target_pct": 4.0},
-    {"name": "UBER TECHNOLOGIES INC", "ticker": "UBER", "target_pct": 1.5},
-    {"name": "UNITED PARCEL SERVICE INC", "ticker": "UPS", "target_pct": 1.0},
-    {"name": "VISA INC", "ticker": "V", "target_pct": 3.0},
-    {"name": "WASTE CONNECTIONS INC", "ticker": "WCN.TO", "target_pct": 1.0}
+    {
+      "name": "ABBVIE INC",
+      "ticker": "ABBV",
+      "target_pct": 3.0,
+      "sector": "Healthcare",
+      "currency": "USD"
+    },
+    {
+      "name": "ALIMENTATION COUCHE-TARD INC",
+      "ticker": "ATD.TO",
+      "target_pct": 4.0,
+      "sector": "Consumer Staples",
+      "currency": "CAD"
+    },
+    {
+      "name": "ALPHABET INC CLASS A",
+      "ticker": "GOOGL",
+      "target_pct": 3.5,
+      "sector": "Technology",
+      "currency": "USD"
+    },
+    {
+      "name": "AMAZON.COM INC",
+      "ticker": "AMZN",
+      "target_pct": 3.0,
+      "sector": "Technology",
+      "currency": "USD"
+    },
+    {
+      "name": "APPLE INC",
+      "ticker": "AAPL",
+      "target_pct": 2.35,
+      "sector": "Technology",
+      "currency": "USD"
+    },
+    {
+      "name": "ATKINSREALIS GROUP INC",
+      "ticker": "ATRL.TO",
+      "target_pct": 3.0,
+      "sector": "Industrials",
+      "currency": "CAD"
+    },
+    {
+      "name": "BANK OF NOVA SCOTIA",
+      "ticker": "BNS.TO",
+      "target_pct": 4.0,
+      "sector": "Financials",
+      "currency": "CAD"
+    },
+    {
+      "name": "BCE INC",
+      "ticker": "BCE.TO",
+      "target_pct": 1.5,
+      "sector": "Telecommunications",
+      "currency": "CAD"
+    },
+    {
+      "name": "BROOKFIELD INFRASTRUCTURE CORP",
+      "ticker": "BIPC.TO",
+      "target_pct": 3.0,
+      "sector": "Utilities",
+      "currency": "CAD"
+    },
+    {
+      "name": "BROOKFIELD INFRASTRUCTURE PARTNERS LP",
+      "ticker": "BIP-UN.TO",
+      "target_pct": 3.0,
+      "sector": "Utilities",
+      "currency": "CAD"
+    },
+    {
+      "name": "BROOKFIELD RENEWABLE CORP",
+      "ticker": "BEPC.TO",
+      "target_pct": 4.0,
+      "sector": "Utilities",
+      "currency": "CAD"
+    },
+    {
+      "name": "CANADIAN NATIONAL RAILWAY CO",
+      "ticker": "CNR.TO",
+      "target_pct": 3.0,
+      "sector": "Industrials",
+      "currency": "CAD"
+    },
+    {
+      "name": "COCA-COLA COMPANY",
+      "ticker": "KO",
+      "target_pct": 3.0,
+      "sector": "Consumer Staples",
+      "currency": "USD"
+    },
+    {
+      "name": "COSTCO WHOLESALE CORP",
+      "ticker": "COST",
+      "target_pct": 1.0,
+      "sector": "Consumer Staples",
+      "currency": "USD"
+    },
+    {
+      "name": "DOLLARAMA INC",
+      "ticker": "DOL.TO",
+      "target_pct": 4.0,
+      "sector": "Consumer Discretionary",
+      "currency": "CAD"
+    },
+    {
+      "name": "ENBRIDGE INC",
+      "ticker": "ENB.TO",
+      "target_pct": 4.0,
+      "sector": "Energy",
+      "currency": "CAD"
+    },
+    {
+      "name": "GENERAL DYNAMICS CORP",
+      "ticker": "GD",
+      "target_pct": 2.0,
+      "sector": "Industrials",
+      "currency": "USD"
+    },
+    {
+      "name": "HONEYWELL INTL INC",
+      "ticker": "HON",
+      "target_pct": 2.0,
+      "sector": "Industrials",
+      "currency": "USD"
+    },
+    {
+      "name": "JOHNSON & JOHNSON",
+      "ticker": "JNJ",
+      "target_pct": 2.0,
+      "sector": "Healthcare",
+      "currency": "USD"
+    },
+    {
+      "name": "LVMH MOET HENNESSY LOUIS VUITTON ADR",
+      "ticker": "LVMUY",
+      "target_pct": 1.5,
+      "sector": "Consumer Discretionary",
+      "currency": "USD"
+    },
+    {
+      "name": "MCDONALDS CORP",
+      "ticker": "MCD",
+      "target_pct": 2.0,
+      "sector": "Consumer Discretionary",
+      "currency": "USD"
+    },
+    {
+      "name": "META PLATFORMS INC",
+      "ticker": "META",
+      "target_pct": 3.5,
+      "sector": "Technology",
+      "currency": "USD"
+    },
+    {
+      "name": "MICROSOFT CORP",
+      "ticker": "MSFT",
+      "target_pct": 3.0,
+      "sector": "Technology",
+      "currency": "USD"
+    },
+    {
+      "name": "NESTLE SA ADR",
+      "ticker": "NSRGY",
+      "target_pct": 2.0,
+      "sector": "Consumer Staples",
+      "currency": "USD"
+    },
+    {
+      "name": "PREMIUM BRANDS HOLDINGS CORP",
+      "ticker": "PBH.TO",
+      "target_pct": 0.65,
+      "sector": "Consumer Staples",
+      "currency": "CAD"
+    },
+    {
+      "name": "ROYAL BANK OF CANADA",
+      "ticker": "RY.TO",
+      "target_pct": 4.0,
+      "sector": "Financials",
+      "currency": "CAD"
+    },
+    {
+      "name": "SIENNA SENIOR LIVING INC",
+      "ticker": "SIA.TO",
+      "target_pct": 4.0,
+      "sector": "Healthcare",
+      "currency": "CAD"
+    },
+    {
+      "name": "STELLA-JONES INC",
+      "ticker": "SJ.TO",
+      "target_pct": 1.5,
+      "sector": "Industrials",
+      "currency": "CAD"
+    },
+    {
+      "name": "STRYKER CORP",
+      "ticker": "SYK",
+      "target_pct": 2.0,
+      "sector": "Healthcare",
+      "currency": "USD"
+    },
+    {
+      "name": "SUNCOR ENERGY INC",
+      "ticker": "SU.TO",
+      "target_pct": 2.0,
+      "sector": "Energy",
+      "currency": "CAD"
+    },
+    {
+      "name": "TC ENERGY CORP",
+      "ticker": "TRP.TO",
+      "target_pct": 3.0,
+      "sector": "Energy",
+      "currency": "CAD"
+    },
+    {
+      "name": "TELUS CORPORATION",
+      "ticker": "T.TO",
+      "target_pct": 4.0,
+      "sector": "Telecommunications",
+      "currency": "CAD"
+    },
+    {
+      "name": "TORONTO-DOMINION BANK",
+      "ticker": "TD.TO",
+      "target_pct": 4.0,
+      "sector": "Financials",
+      "currency": "CAD"
+    },
+    {
+      "name": "UBER TECHNOLOGIES INC",
+      "ticker": "UBER",
+      "target_pct": 1.5,
+      "sector": "Technology",
+      "currency": "USD"
+    },
+    {
+      "name": "UNITED PARCEL SERVICE INC",
+      "ticker": "UPS",
+      "target_pct": 1.0,
+      "sector": "Industrials",
+      "currency": "USD"
+    },
+    {
+      "name": "VISA INC",
+      "ticker": "V",
+      "target_pct": 3.0,
+      "sector": "Financials",
+      "currency": "USD"
+    },
+    {
+      "name": "WASTE CONNECTIONS INC",
+      "ticker": "WCN.TO",
+      "target_pct": 1.0,
+      "sector": "Industrials",
+      "currency": "CAD"
+    }
   ]
 }

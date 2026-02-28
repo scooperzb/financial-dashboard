@@ -751,6 +751,49 @@ def build_model_comparison(model_df: pd.DataFrame,
     return result.sort_values("Divergence %", ascending=True).reset_index(drop=True)
 
 
+def build_model_composition(model_df: pd.DataFrame,
+                            holdings: pd.DataFrame) -> tuple:
+    """Aggregate model target_pct by sector and currency.
+
+    Uses a three-tier lookup:
+      1. sector/currency fields in the model JSON itself
+      2. Fallback to holdings.json lookup by ticker
+      3. Infer currency from ticker suffix (.TO = CAD, else USD); sector = "Other"
+
+    Returns (sector_series, currency_series) mapping category → sum of target_pct.
+    """
+    holdings_lookup = holdings.set_index("ticker")[["sector", "currency"]].to_dict("index")
+
+    rows = []
+    for _, m in model_df.iterrows():
+        ticker = m["ticker"]
+        target = m["target_pct"]
+
+        # Tier 1: from model JSON
+        sector = m.get("sector") if "sector" in m.index else None
+        currency = m.get("currency") if "currency" in m.index else None
+
+        # Tier 2: from holdings
+        if not sector and ticker in holdings_lookup:
+            sector = holdings_lookup[ticker].get("sector")
+        if not currency and ticker in holdings_lookup:
+            currency = holdings_lookup[ticker].get("currency")
+
+        # Tier 3: infer
+        if not currency:
+            currency = "CAD" if ticker.endswith(".TO") else "USD"
+        if not sector:
+            sector = "Other"
+
+        rows.append({"sector": sector, "currency": currency, "target_pct": target})
+
+    comp = pd.DataFrame(rows)
+    sector_agg = comp.groupby("sector")["target_pct"].sum().sort_values(ascending=False)
+    currency_agg = comp.groupby("currency")["target_pct"].sum().sort_values(ascending=False)
+
+    return sector_agg, currency_agg
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # CHARTS
 # ──────────────────────────────────────────────────────────────────────────────
@@ -761,6 +804,7 @@ SECTOR_COLORS = {
     "Consumer Staples": "#ec4899", "Consumer Discretionary": "#84cc16",
     "Real Estate": "#d946ef", "Telecommunications": "#eab308",
     "Commodities": "#facc15", "Digital Assets": "#f59e0b", "ETF - Equity": "#6b7280",
+    "Cash": "#94a3b8",
 }
 
 SENTIMENT_STYLE = {
@@ -770,11 +814,17 @@ SENTIMENT_STYLE = {
 }
 
 
-def make_donut(labels, values, title, colors=None):
+def make_donut(labels, values, title, colors=None, center_text=None,
+               hover_format=None):
     total = sum(values)
     # Build custom legend labels: "Label  XX.X%"
     pcts = [(v / total * 100) if total else 0 for v in values]
     legend_labels = [f"{lbl}  {p:.1f}%" for lbl, p in zip(labels, pcts)]
+
+    if hover_format == "pct":
+        ht = "<b>%{label}</b><br>%{value:.2f}%<extra></extra>"
+    else:
+        ht = "<b>%{label}</b><br>$%{value:,.0f}<extra></extra>"
 
     fig = go.Figure(go.Pie(
         labels=legend_labels, values=values, hole=0.55,
@@ -783,9 +833,13 @@ def make_donut(labels, values, title, colors=None):
             line=dict(color="#0f172a", width=2),
         ) if colors else dict(line=dict(color="#0f172a", width=2)),
         textinfo="none",
-        hovertemplate="<b>%{label}</b><br>$%{value:,.0f}<extra></extra>",
+        hovertemplate=ht,
         sort=True, direction="clockwise",
     ))
+
+    if center_text is None:
+        center_text = f"<b>${total/1e6:.0f}M</b>"
+
     fig.update_layout(
         title=dict(
             text=title, font=dict(size=13, color="#94a3b8", family="Inter"),
@@ -805,7 +859,7 @@ def make_donut(labels, values, title, colors=None):
             traceorder="normal",
         ),
         annotations=[dict(
-            text=f"<b>${total/1e6:.0f}M</b>",
+            text=center_text,
             x=0.5, y=0.5, font=dict(size=20, color="#e2e8f0", family="Inter"),
             showarrow=False,
         )],
@@ -1092,6 +1146,62 @@ def main():
                 """,
                 unsafe_allow_html=True,
             )
+
+            # ── Model Composition Donuts ──
+            sector_agg, currency_agg = build_model_composition(
+                model_df, holdings)
+
+            st.markdown(
+                '<div class="section-header" style="margin-top:1.5rem;">'
+                'Model Target Composition</div>',
+                unsafe_allow_html=True,
+            )
+
+            m_chart_left, m_chart_right = st.columns([2, 3], gap="large")
+
+            with m_chart_left:
+                curr_colors = [
+                    "#34d399" if c == "CAD" else "#f87171"
+                    for c in currency_agg.index
+                ]
+                total_equity_pct = model_meta.get("total_equity_pct",
+                                                   currency_agg.sum())
+                fig_curr = make_donut(
+                    currency_agg.index.tolist(),
+                    currency_agg.values.tolist(),
+                    "CURRENCY EXPOSURE (TARGET)",
+                    colors=curr_colors,
+                    center_text=f"<b>{total_equity_pct:.1f}%</b>",
+                    hover_format="pct",
+                )
+                st.plotly_chart(fig_curr, use_container_width=True,
+                                key=f"{model_key}_curr_donut")
+
+            with m_chart_right:
+                # Add cash slice so sector donut sums to 100%
+                cash_pct = model_meta.get("cash_pct", 0)
+                if cash_pct > 0:
+                    sector_with_cash = pd.concat([
+                        sector_agg,
+                        pd.Series({"Cash": cash_pct}),
+                    ])
+                else:
+                    sector_with_cash = sector_agg
+
+                sector_colors = [
+                    SECTOR_COLORS.get(s, "#6b7280")
+                    for s in sector_with_cash.index
+                ]
+                fig_sect = make_donut(
+                    sector_with_cash.index.tolist(),
+                    sector_with_cash.values.tolist(),
+                    "SECTOR ALLOCATION (TARGET)",
+                    colors=sector_colors,
+                    center_text=f"<b>{total_equity_pct:.1f}%</b>",
+                    hover_format="pct",
+                )
+                st.plotly_chart(fig_sect, use_container_width=True,
+                                key=f"{model_key}_sect_donut")
 
     st.markdown("---")
 
