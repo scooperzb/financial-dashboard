@@ -379,24 +379,29 @@ def load_holdings() -> tuple[dict, pd.DataFrame]:
 
 
 @st.cache_data(ttl=300)
-def load_all_models() -> list[tuple[dict, pd.DataFrame]]:
+def load_all_models() -> list:
     """Load all model JSON files from the models/ directory.
     Returns a list of (meta, constituents_df) tuples, sorted by tab_name.
     """
     models = []
     if not MODELS_DIR.exists():
+        st.warning(f"Models directory not found: {MODELS_DIR}")
         return models
-    for fpath in sorted(MODELS_DIR.glob("*.json")):
+    json_files = sorted(MODELS_DIR.glob("*.json"))
+    if not json_files:
+        st.warning(f"No JSON files found in {MODELS_DIR}")
+        return models
+    for fpath in json_files:
         try:
-            with open(fpath, "r") as f:
+            with open(fpath, "r", encoding="utf-8-sig") as f:
                 data = json.load(f)
             meta = data.get("_meta", {})
             meta.setdefault("tab_name", meta.get("model_name", fpath.stem))
             df = pd.DataFrame(data.get("constituents", []))
             if not df.empty:
                 models.append((meta, df))
-        except Exception:
-            pass
+        except Exception as e:
+            st.error(f"Error loading model {fpath.name}: {e}")
     return models
 
 
