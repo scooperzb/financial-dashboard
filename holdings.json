@@ -1,79 +1,955 @@
 {
   "_meta": {
-    "report_date": "2026-02-01",
-    "report_title": "Monthly Top Holdings Report — February 1, 2026",
-    "total_positions": 68,
-    "total_market_value": 209177327,
-    "notes": "Consolidated Equity & Alternative ETF Positions >= $250,000. Excludes Cash, GICs, Bonds, Debentures, Fixed Income ETFs/Funds, Mutual Funds, Preferreds, Short Positions."
+    "report_date": "2026-02-27",
+    "report_title": "Holdings Import \u2014 2026-02-27",
+    "total_positions": 118,
+    "total_market_value": 226615596,
+    "notes": "Imported from Holdings_Detail_1_949TotReturnBookofBusiness_20260227.xls"
   },
   "holdings": [
-    {"name": "SPDR Gold Trust",                       "ticker": "GLD",        "currency": "USD", "quantity": 18043,  "market_value": 10926425, "sector": "Commodities"},
-    {"name": "Royal Bank of Canada",                  "ticker": "RY.TO",      "currency": "CAD", "quantity": 43435,  "market_value": 10615380, "sector": "Financials"},
-    {"name": "Brookfield Renewable Partners LP",      "ticker": "BEP-UN.TO",  "currency": "CAD", "quantity": 103247, "market_value": 10268167, "sector": "Utilities"},
-    {"name": "Alphabet Inc Class A",                  "ticker": "GOOGL",      "currency": "USD", "quantity": 20510,  "market_value": 10168511, "sector": "Technology"},
-    {"name": "Dollarama Inc",                         "ticker": "DOL.TO",     "currency": "CAD", "quantity": 43077,  "market_value": 7909191,  "sector": "Consumer Discretionary"},
-    {"name": "Sienna Senior Living Inc",              "ticker": "SIA.TO",     "currency": "CAD", "quantity": 369719, "market_value": 7870578,  "sector": "Healthcare"},
-    {"name": "Meta Platforms Inc",                    "ticker": "META",       "currency": "USD", "quantity": 7979,   "market_value": 7791942,  "sector": "Technology"},
-    {"name": "Toronto-Dominion Bank",                 "ticker": "TD.TO",      "currency": "CAD", "quantity": 60383,  "market_value": 7684341,  "sector": "Financials"},
-    {"name": "Telus Corporation",                     "ticker": "T.TO",       "currency": "CAD", "quantity": 400210, "market_value": 7604028,  "sector": "Telecommunications"},
-    {"name": "Apple Inc",                             "ticker": "AAPL",       "currency": "USD", "quantity": 17846,  "market_value": 6302726,  "sector": "Technology"},
-    {"name": "Bank of Nova Scotia",                   "ticker": "BNS.TO",     "currency": "CAD", "quantity": 58845,  "market_value": 5990421,  "sector": "Financials"},
-    {"name": "Enbridge Inc",                          "ticker": "ENB.TO",     "currency": "CAD", "quantity": 84745,  "market_value": 5681058,  "sector": "Energy"},
-    {"name": "Alimentation Couche-Tard Inc",          "ticker": "ATD.TO",     "currency": "CAD", "quantity": 72659,  "market_value": 5147164,  "sector": "Consumer Staples"},
-    {"name": "AbbVie Inc",                            "ticker": "ABBV",       "currency": "USD", "quantity": 15906,  "market_value": 4865179,  "sector": "Healthcare"},
-    {"name": "AtkinsRealis Group Inc",                "ticker": "ATRL.TO",    "currency": "CAD", "quantity": 50313,  "market_value": 4807910,  "sector": "Industrials"},
-    {"name": "Amazon.com Inc",                        "ticker": "AMZN",       "currency": "USD", "quantity": 8082,   "market_value": 4764538,  "sector": "Technology"},
-    {"name": "Coca-Cola Company",                     "ticker": "KO",         "currency": "USD", "quantity": 45699,  "market_value": 4652908,  "sector": "Consumer Staples"},
-    {"name": "TC Energy Corp",                        "ticker": "TRP.TO",     "currency": "CAD", "quantity": 46688,  "market_value": 4245332,  "sector": "Energy"},
-    {"name": "Aecon Group Inc",                       "ticker": "ARE.TO",     "currency": "CAD", "quantity": 119294, "market_value": 4211078,  "sector": "Industrials"},
-    {"name": "Microsoft Corp",                        "ticker": "MSFT",       "currency": "USD", "quantity": 6907,   "market_value": 4078581,  "sector": "Technology"},
-    {"name": "Premium Brands Holdings Corp",          "ticker": "PBH.TO",     "currency": "CAD", "quantity": 41823,  "market_value": 3914633,  "sector": "Consumer Staples"},
-    {"name": "Visa Inc",                              "ticker": "V",          "currency": "USD", "quantity": 8018,   "market_value": 3511969,  "sector": "Financials"},
-    {"name": "Brookfield Infrastructure Corp",        "ticker": "BIPC.TO",    "currency": "CAD", "quantity": 29550,  "market_value": 3488546,  "sector": "Utilities"},
-    {"name": "Honeywell International Inc",           "ticker": "HON",        "currency": "USD", "quantity": 10744,  "market_value": 3327008,  "sector": "Industrials"},
-    {"name": "Canadian National Railway Co",          "ticker": "CNR.TO",     "currency": "CAD", "quantity": 24064,  "market_value": 3187117,  "sector": "Industrials"},
-    {"name": "Fortis Inc",                            "ticker": "FTS.TO",     "currency": "CAD", "quantity": 41862,  "market_value": 3039181,  "sector": "Utilities"},
-    {"name": "Johnson & Johnson",                     "ticker": "JNJ",        "currency": "USD", "quantity": 9674,   "market_value": 2992045,  "sector": "Healthcare"},
-    {"name": "Waste Connections Inc",                 "ticker": "WCN.TO",     "currency": "CAD", "quantity": 9118,   "market_value": 2593958,  "sector": "Industrials"},
-    {"name": "SmartCentres REIT",                     "ticker": "SRU-UN.TO",  "currency": "CAD", "quantity": 96516,  "market_value": 2590460,  "sector": "Real Estate"},
-    {"name": "Savaria Corporation",                   "ticker": "SIS.TO",     "currency": "CAD", "quantity": 105146, "market_value": 2496762,  "sector": "Healthcare"},
-    {"name": "Suncor Energy Inc",                     "ticker": "SU.TO",      "currency": "CAD", "quantity": 31188,  "market_value": 2279865,  "sector": "Energy"},
-    {"name": "Nestle SA ADR",                         "ticker": "NSRGY",      "currency": "USD", "quantity": 17576,  "market_value": 2275951,  "sector": "Consumer Staples"},
-    {"name": "Uber Technologies Inc",                 "ticker": "UBER",       "currency": "USD", "quantity": 19870,  "market_value": 2165275,  "sector": "Technology"},
-    {"name": "Bombardier Inc Cl B",                   "ticker": "BBD-B.TO",   "currency": "CAD", "quantity": 8896,   "market_value": 2069299,  "sector": "Industrials"},
-    {"name": "Firm Capital Mortgage Investment",      "ticker": "FC.TO",      "currency": "CAD", "quantity": 170461, "market_value": 2052350,  "sector": "Financials"},
-    {"name": "Stryker Corp",                          "ticker": "SYK",        "currency": "USD", "quantity": 4056,   "market_value": 2040051,  "sector": "Healthcare"},
-    {"name": "Canadian Imperial Bank of Commerce",    "ticker": "CM.TO",      "currency": "CAD", "quantity": 16099,  "market_value": 2025898,  "sector": "Financials"},
-    {"name": "Capital Power Corporation",             "ticker": "CPX.TO",     "currency": "CAD", "quantity": 33702,  "market_value": 2013694,  "sector": "Utilities"},
-    {"name": "Definity Financial Corp",               "ticker": "DFY.TO",     "currency": "CAD", "quantity": 29040,  "market_value": 1935226,  "sector": "Financials"},
-    {"name": "Novo Nordisk A/S ADR",                  "ticker": "NVO",        "currency": "USD", "quantity": 20750,  "market_value": 1679837,  "sector": "Healthcare"},
-    {"name": "iShares Gold Bullion ETF (Hedged)",     "ticker": "CGL.TO",     "currency": "CAD", "quantity": 44625,  "market_value": 1664066,  "sector": "Commodities"},
-    {"name": "Costco Wholesale Corp",                 "ticker": "COST",       "currency": "USD", "quantity": 1154,   "market_value": 1480064,  "sector": "Consumer Staples"},
-    {"name": "McDonald's Corp",                       "ticker": "MCD",        "currency": "USD", "quantity": 3274,   "market_value": 1403613,  "sector": "Consumer Discretionary"},
-    {"name": "LVMH Moet Hennessy Louis Vuitton ADR",  "ticker": "LVMUY",      "currency": "USD", "quantity": 7720,   "market_value": 1359546,  "sector": "Consumer Discretionary"},
-    {"name": "Power Corp of Canada",                  "ticker": "POW.TO",     "currency": "CAD", "quantity": 18610,  "market_value": 1277949,  "sector": "Financials"},
-    {"name": "Berkshire Hathaway Inc Cl A",            "ticker": "BRK-A",      "currency": "USD", "quantity": 1,      "market_value": 1249501,  "sector": "Financials"},
-    {"name": "General Dynamics Corp",                 "ticker": "GD",         "currency": "USD", "quantity": 2379,   "market_value": 1140098,  "sector": "Industrials"},
-    {"name": "Home Depot Inc",                        "ticker": "HD",         "currency": "USD", "quantity": 2048,   "market_value": 1132788,  "sector": "Consumer Discretionary"},
-    {"name": "Mastercard Inc",                        "ticker": "MA",         "currency": "USD", "quantity": 1250,   "market_value": 918097,   "sector": "Financials"},
-    {"name": "iShares Bitcoin Trust ETF",             "ticker": "IBIT",       "currency": "USD", "quantity": 13109,  "market_value": 903118,   "sector": "Digital Assets"},
-    {"name": "iShares Ethereum Trust ETF",            "ticker": "ETHA",       "currency": "USD", "quantity": 28108,  "market_value": 778068,   "sector": "Digital Assets"},
-    {"name": "Nike Inc",                              "ticker": "NKE",        "currency": "USD", "quantity": 8570,   "market_value": 747397,   "sector": "Consumer Discretionary"},
-    {"name": "MercadoLibre Inc",                      "ticker": "MELI",       "currency": "USD", "quantity": 250,    "market_value": 730786,   "sector": "Technology"},
-    {"name": "CT REIT",                               "ticker": "CRT-UN.TO",  "currency": "CAD", "quantity": 39662,  "market_value": 650327,   "sector": "Real Estate"},
-    {"name": "Procter & Gamble Co",                   "ticker": "PG",         "currency": "USD", "quantity": 3048,   "market_value": 633976,   "sector": "Consumer Staples"},
-    {"name": "BCE Inc",                               "ticker": "BCE.TO",     "currency": "CAD", "quantity": 16678,  "market_value": 587066,   "sector": "Telecommunications"},
-    {"name": "National Bank of Canada",               "ticker": "NA.TO",      "currency": "CAD", "quantity": 3400,   "market_value": 551650,   "sector": "Financials"},
-    {"name": "Chartwell Retirement Residences",       "ticker": "CSH-UN.TO",  "currency": "CAD", "quantity": 26486,  "market_value": 536898,   "sector": "Healthcare"},
-    {"name": "Plaza Retail REIT",                     "ticker": "PLZ-UN.TO",  "currency": "CAD", "quantity": 117237, "market_value": 500989,   "sector": "Real Estate"},
-    {"name": "Bristol Gate US Equity ETF (USD)",       "ticker": "BGU-U.TO",   "currency": "USD", "quantity": 9946,   "market_value": 493000,   "sector": "ETF - Equity"},
-    {"name": "Canadian Pacific Kansas City Ltd",      "ticker": "CP.TO",      "currency": "CAD", "quantity": 4098,   "market_value": 485654,   "sector": "Industrials"},
-    {"name": "Atrium Mortgage Investment Corp",       "ticker": "AI.TO",      "currency": "CAD", "quantity": 41428,  "market_value": 475593,   "sector": "Financials"},
-    {"name": "United Parcel Service Inc",             "ticker": "UPS",        "currency": "USD", "quantity": 3147,   "market_value": 454974,   "sector": "Industrials"},
-    {"name": "Bristol Gate US Equity ETF (CAD)",       "ticker": "BGU.TO",     "currency": "CAD", "quantity": 8615,   "market_value": 426356,   "sector": "ETF - Equity"},
-    {"name": "Global Net Lease Inc",                  "ticker": "GNL",        "currency": "USD", "quantity": 29480,  "market_value": 379557,   "sector": "Real Estate"},
-    {"name": "Flagship Communities REIT",             "ticker": "MHCUF",      "currency": "USD", "quantity": 13565,  "market_value": 365630,   "sector": "Real Estate"},
-    {"name": "TJX Companies Inc",                     "ticker": "TJX",        "currency": "USD", "quantity": 1479,   "market_value": 301555,   "sector": "Consumer Discretionary"},
-    {"name": "Pembina Pipeline Corp",                 "ticker": "PPL.TO",     "currency": "CAD", "quantity": 5027,   "market_value": 284428,   "sector": "Energy"}
+    {
+      "name": "STORAGEVAULT CANADA INC UNSEC HYBRID DEBS",
+      "ticker": "SVI-ZD.TO",
+      "currency": "CAD",
+      "quantity": 200000,
+      "market_value": 206792,
+      "sector": "Other"
+    },
+    {
+      "name": "FIRM CAPITAL MTG INVT CORP CONV SUBORDINATED DEBS",
+      "ticker": "FC-ZK.TO",
+      "currency": "CAD",
+      "quantity": 300000,
+      "market_value": 302239,
+      "sector": "Other"
+    },
+    {
+      "name": "ISHARES CORE CANADIAN SHORT TERM CORPORATE BOND INDX ETF ETF",
+      "ticker": "XSH.TO",
+      "currency": "CAD",
+      "quantity": 129493,
+      "market_value": 2492740,
+      "sector": "Other"
+    },
+    {
+      "name": "ISHARES TR 0-5 YR HIGH YIELD CORP BD ETF",
+      "ticker": "SHYG",
+      "currency": "USD",
+      "quantity": 9000,
+      "market_value": 526076,
+      "sector": "Other"
+    },
+    {
+      "name": "ISHARES TRUST ISHARES 7 10 YEAR TREASURY BOND ETF",
+      "ticker": "IEF",
+      "currency": "USD",
+      "quantity": 11376,
+      "market_value": 1523842,
+      "sector": "Other"
+    },
+    {
+      "name": "VANGUARD CDN SHORT TERM COR BD INDEX ETF TR UNIT",
+      "ticker": "VSC.TO",
+      "currency": "CAD",
+      "quantity": 5000,
+      "market_value": 122200,
+      "sector": "Other"
+    },
+    {
+      "name": "VANGUARD LONG TERM BOND ETF",
+      "ticker": "BLV",
+      "currency": "USD",
+      "quantity": 10649,
+      "market_value": 1041275,
+      "sector": "Other"
+    },
+    {
+      "name": "VANGUARD SHORT TERM INFLATION PROTECTED SECURITIES INDEX FUND",
+      "ticker": "VTIP",
+      "currency": "USD",
+      "quantity": 1760,
+      "market_value": 120055,
+      "sector": "Other"
+    },
+    {
+      "name": "ENBRIDGE INC 5.8579% CUM RT RESET PREF SHS SER-L",
+      "ticker": "ENB-FU.TO",
+      "currency": "USD",
+      "quantity": 10250,
+      "market_value": 343988,
+      "sector": "Financials"
+    },
+    {
+      "name": "AGNICO EAGLE MINES LIMITED",
+      "ticker": "AEM.TO",
+      "currency": "CAD",
+      "quantity": 446,
+      "market_value": 152813,
+      "sector": "Commodities"
+    },
+    {
+      "name": "DPM METALS INC COM",
+      "ticker": "DPM.TO",
+      "currency": "CAD",
+      "quantity": 3050,
+      "market_value": 180133,
+      "sector": "Commodities"
+    },
+    {
+      "name": "ENBRIDGE INC",
+      "ticker": "ENB.TO",
+      "currency": "CAD",
+      "quantity": 83999,
+      "market_value": 6087408,
+      "sector": "Energy"
+    },
+    {
+      "name": "KEYERA CORP",
+      "ticker": "KEY.TO",
+      "currency": "CAD",
+      "quantity": 2500,
+      "market_value": 130150,
+      "sector": "Energy"
+    },
+    {
+      "name": "PEMBINA PIPELINE CORP",
+      "ticker": "PPL.TO",
+      "currency": "CAD",
+      "quantity": 5027,
+      "market_value": 301369,
+      "sector": "Energy"
+    },
+    {
+      "name": "SUNCOR ENERGY INC",
+      "ticker": "SU.TO",
+      "currency": "CAD",
+      "quantity": 31188,
+      "market_value": 2403035,
+      "sector": "Energy"
+    },
+    {
+      "name": "TC ENERGY CORP COM",
+      "ticker": "TRP.TO",
+      "currency": "CAD",
+      "quantity": 46638,
+      "market_value": 4087821,
+      "sector": "Energy"
+    },
+    {
+      "name": "TC ENERGY CORP COM",
+      "ticker": "TRP",
+      "currency": "USD",
+      "quantity": 6485,
+      "market_value": 570640,
+      "sector": "Energy"
+    },
+    {
+      "name": "AECON GROUP INC",
+      "ticker": "ARE.TO",
+      "currency": "CAD",
+      "quantity": 115720,
+      "market_value": 4398517,
+      "sector": "Industrials"
+    },
+    {
+      "name": "AMETEK INC NEW",
+      "ticker": "AME",
+      "currency": "USD",
+      "quantity": 325,
+      "market_value": 106279,
+      "sector": "Industrials"
+    },
+    {
+      "name": "ARCHER AVIATION INC CLASS A COMMON STOCK",
+      "ticker": "ACHR",
+      "currency": "USD",
+      "quantity": 18496,
+      "market_value": 180022,
+      "sector": "Industrials"
+    },
+    {
+      "name": "ATKINSREALIS GROUP INC COM",
+      "ticker": "ATRL.TO",
+      "currency": "CAD",
+      "quantity": 50245,
+      "market_value": 4750665,
+      "sector": "Industrials"
+    },
+    {
+      "name": "BOMBARDIER INC CL B NEW",
+      "ticker": "BBD-B.TO",
+      "currency": "CAD",
+      "quantity": 8896,
+      "market_value": 2507693,
+      "sector": "Industrials"
+    },
+    {
+      "name": "BROOKFIELD INFRASTRUCTURE COMPOSITE PARTNERS L P",
+      "ticker": "BIP-UN.TO",
+      "currency": "CAD",
+      "quantity": 28156,
+      "market_value": 1498181,
+      "sector": "Industrials"
+    },
+    {
+      "name": "BROOKFIELD INFRASTRUCTURE PARTNERS L P UNITS",
+      "ticker": "BIP",
+      "currency": "USD",
+      "quantity": 2907,
+      "market_value": 155140,
+      "sector": "Industrials"
+    },
+    {
+      "name": "CANADIAN NATIONAL RAILWAY CO",
+      "ticker": "CNR.TO",
+      "currency": "CAD",
+      "quantity": 24061,
+      "market_value": 3683017,
+      "sector": "Industrials"
+    },
+    {
+      "name": "CANADIAN PAC KANS CITY LTD COM",
+      "ticker": "CP.TO",
+      "currency": "CAD",
+      "quantity": 3798,
+      "market_value": 453633,
+      "sector": "Industrials"
+    },
+    {
+      "name": "GENERAL DYNAMICS CORP",
+      "ticker": "GD",
+      "currency": "USD",
+      "quantity": 2399,
+      "market_value": 1170921,
+      "sector": "Industrials"
+    },
+    {
+      "name": "HONEYWELL INTL INC",
+      "ticker": "HON",
+      "currency": "USD",
+      "quantity": 10759,
+      "market_value": 3582613,
+      "sector": "Industrials"
+    },
+    {
+      "name": "JOBY AVIATION INC COMMON STOCK",
+      "ticker": "JOBY",
+      "currency": "USD",
+      "quantity": 17324,
+      "market_value": 238240,
+      "sector": "Industrials"
+    },
+    {
+      "name": "SAVARIA CORPORATION",
+      "ticker": "SIS.TO",
+      "currency": "CAD",
+      "quantity": 106850,
+      "market_value": 2697962,
+      "sector": "Healthcare"
+    },
+    {
+      "name": "UNITED PARCEL SVC INC CL B",
+      "ticker": "UPS",
+      "currency": "USD",
+      "quantity": 3119,
+      "market_value": 494416,
+      "sector": "Industrials"
+    },
+    {
+      "name": "WASTE CONNECTIONS INC COM",
+      "ticker": "WCN",
+      "currency": "USD",
+      "quantity": 2016,
+      "market_value": 474368,
+      "sector": "Industrials"
+    },
+    {
+      "name": "WASTE CONNECTIONS INC COM",
+      "ticker": "WCN.TO",
+      "currency": "CAD",
+      "quantity": 9153,
+      "market_value": 2148484,
+      "sector": "Industrials"
+    },
+    {
+      "name": "ALIMENTATION COUCHE-TARD INC COM",
+      "ticker": "ATD.TO",
+      "currency": "CAD",
+      "quantity": 72659,
+      "market_value": 6014712,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "COSTCO WHOLESALE CORP-NEW",
+      "ticker": "COST",
+      "currency": "USD",
+      "quantity": 1154,
+      "market_value": 1594539,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "DOLLARAMA INC",
+      "ticker": "DOL.TO",
+      "currency": "CAD",
+      "quantity": 42982,
+      "market_value": 8631645,
+      "sector": "Consumer Discretionary"
+    },
+    {
+      "name": "HOME DEPOT INC",
+      "ticker": "HD",
+      "currency": "USD",
+      "quantity": 2628,
+      "market_value": 1367727,
+      "sector": "Consumer Discretionary"
+    },
+    {
+      "name": "LVMH MOET HENNESSY LOUIS VUITTON SA UNSPONSORED ADR",
+      "ticker": "LVMUY",
+      "currency": "USD",
+      "quantity": 8120,
+      "market_value": 1426166,
+      "sector": "Consumer Discretionary"
+    },
+    {
+      "name": "MCDONALDS CORP",
+      "ticker": "MCD",
+      "currency": "USD",
+      "quantity": 3274,
+      "market_value": 1526434,
+      "sector": "Consumer Discretionary"
+    },
+    {
+      "name": "NIKE INC CLASS B COM",
+      "ticker": "NKE",
+      "currency": "USD",
+      "quantity": 9270,
+      "market_value": 787951,
+      "sector": "Consumer Discretionary"
+    },
+    {
+      "name": "TJX COMPANIES INC NEW",
+      "ticker": "TJX",
+      "currency": "USD",
+      "quantity": 1477,
+      "market_value": 326401,
+      "sector": "Consumer Discretionary"
+    },
+    {
+      "name": "ABBOTT LABORATORIES",
+      "ticker": "ABT",
+      "currency": "USD",
+      "quantity": 692,
+      "market_value": 110063,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "ABBVIE INC",
+      "ticker": "ABBV",
+      "currency": "USD",
+      "quantity": 15914,
+      "market_value": 5048770,
+      "sector": "Healthcare"
+    },
+    {
+      "name": "CHARTWELL RETIREMENT RESIDENCES TR UNIT",
+      "ticker": "CSH-UN.TO",
+      "currency": "CAD",
+      "quantity": 26486,
+      "market_value": 588519,
+      "sector": "Healthcare"
+    },
+    {
+      "name": "COCA COLA COMPANY (THE)",
+      "ticker": "KO",
+      "currency": "USD",
+      "quantity": 45566,
+      "market_value": 5080268,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "COLLIERS INTERNATIONAL GROUP INC SUB VTG SH",
+      "ticker": "CIGI.TO",
+      "currency": "CAD",
+      "quantity": 8381,
+      "market_value": 1355962,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "COLLIERS INTERNATIONAL GROUP INC SUB VTG SH",
+      "ticker": "CIGI",
+      "currency": "USD",
+      "quantity": 4271,
+      "market_value": 693200,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "JOHNSON & JOHNSON COMMON STOCK",
+      "ticker": "JNJ",
+      "currency": "USD",
+      "quantity": 9674,
+      "market_value": 3285327,
+      "sector": "Healthcare"
+    },
+    {
+      "name": "LOBLAW COMPANIES LTD",
+      "ticker": "L.TO",
+      "currency": "CAD",
+      "quantity": 1657,
+      "market_value": 104756,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "MONDELEZ INTERNATIONAL INC COM",
+      "ticker": "MDLZ",
+      "currency": "USD",
+      "quantity": 1490,
+      "market_value": 125428,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "NESTLE SA-SPONSORED ADR REPSTG REGD ORD (SF 10 PAR)",
+      "ticker": "NSRGY",
+      "currency": "USD",
+      "quantity": 17576,
+      "market_value": 2623682,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "PEPSICO INC COMMON STOCK",
+      "ticker": "PEP",
+      "currency": "USD",
+      "quantity": 728,
+      "market_value": 168921,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "PFIZER INC",
+      "ticker": "PFE",
+      "currency": "USD",
+      "quantity": 3000,
+      "market_value": 113393,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "PREMIUM BRANDS HOLDINGS CORPORATION",
+      "ticker": "PBH.TO",
+      "currency": "CAD",
+      "quantity": 41925,
+      "market_value": 4444469,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "PROCTER & GAMBLE CO",
+      "ticker": "PG",
+      "currency": "USD",
+      "quantity": 3318,
+      "market_value": 758370,
+      "sector": "Consumer Staples"
+    },
+    {
+      "name": "SIENNA SR LIVING INC COM",
+      "ticker": "SIA.TO",
+      "currency": "CAD",
+      "quantity": 371417,
+      "market_value": 8720871,
+      "sector": "Healthcare"
+    },
+    {
+      "name": "STRYKER CORP",
+      "ticker": "SYK",
+      "currency": "USD",
+      "quantity": 4040,
+      "market_value": 2139818,
+      "sector": "Healthcare"
+    },
+    {
+      "name": "BANK OF MONTREAL",
+      "ticker": "BMO.TO",
+      "currency": "CAD",
+      "quantity": 795,
+      "market_value": 156066,
+      "sector": "Financials"
+    },
+    {
+      "name": "BANK OF NOVA SCOTIA",
+      "ticker": "BNS.TO",
+      "currency": "CAD",
+      "quantity": 58823,
+      "market_value": 6087004,
+      "sector": "Financials"
+    },
+    {
+      "name": "BERKSHIRE HATHAWAY INC DEL CL B",
+      "ticker": "BRK-B",
+      "currency": "USD",
+      "quantity": 407,
+      "market_value": 280939,
+      "sector": "Financials"
+    },
+    {
+      "name": "BERKSHIRE HATHAWAY INC-DEL CL A",
+      "ticker": "BRK-A",
+      "currency": "USD",
+      "quantity": 1,
+      "market_value": 1034819,
+      "sector": "Financials"
+    },
+    {
+      "name": "CANADIAN IMPERIAL BANK OF COMMERCE",
+      "ticker": "CM.TO",
+      "currency": "CAD",
+      "quantity": 16034,
+      "market_value": 2209325,
+      "sector": "Financials"
+    },
+    {
+      "name": "CHUBB LTD COM",
+      "ticker": "CB",
+      "currency": "USD",
+      "quantity": 290,
+      "market_value": 135127,
+      "sector": "Financials"
+    },
+    {
+      "name": "CT REAL ESTATE INVT TR UNIT",
+      "ticker": "CRT-UN.TO",
+      "currency": "CAD",
+      "quantity": 27607,
+      "market_value": 474840,
+      "sector": "Real Estate"
+    },
+    {
+      "name": "DEFINITY FINL CORP COM",
+      "ticker": "DFY.TO",
+      "currency": "CAD",
+      "quantity": 30002,
+      "market_value": 2048537,
+      "sector": "Financials"
+    },
+    {
+      "name": "FIRM CAPITAL MORTGAGE INVESTMENT CORPORATION",
+      "ticker": "FC.TO",
+      "currency": "CAD",
+      "quantity": 85340,
+      "market_value": 1050535,
+      "sector": "Financials"
+    },
+    {
+      "name": "FLAGSHIP CMNTYS REAL ESTATE INVT TRUST UNIT",
+      "ticker": "MHCUF",
+      "currency": "USD",
+      "quantity": 13565,
+      "market_value": 365119,
+      "sector": "Real Estate"
+    },
+    {
+      "name": "GLOBAL NET LEASE INC COMMON STOCK",
+      "ticker": "GNL",
+      "currency": "USD",
+      "quantity": 27135,
+      "market_value": 349421,
+      "sector": "Real Estate"
+    },
+    {
+      "name": "INTERACTIVE BROKERS GROUP INC CLASS A COMMON STOCK",
+      "ticker": "IBKR",
+      "currency": "USD",
+      "quantity": 1040,
+      "market_value": 101209,
+      "sector": "Financials"
+    },
+    {
+      "name": "JPMORGAN CHASE & CO",
+      "ticker": "JPM",
+      "currency": "USD",
+      "quantity": 388,
+      "market_value": 159278,
+      "sector": "Financials"
+    },
+    {
+      "name": "MASTERCARD INCORPORATED",
+      "ticker": "MA",
+      "currency": "USD",
+      "quantity": 1250,
+      "market_value": 883783,
+      "sector": "Financials"
+    },
+    {
+      "name": "MEDICAL PROPERTIES TRUST INC",
+      "ticker": "MPT",
+      "currency": "USD",
+      "quantity": 24255,
+      "market_value": 190982,
+      "sector": "Financials"
+    },
+    {
+      "name": "NATIONAL BANK OF CANADA",
+      "ticker": "NA.TO",
+      "currency": "CAD",
+      "quantity": 3400,
+      "market_value": 647258,
+      "sector": "Financials"
+    },
+    {
+      "name": "PLAZA RETAIL REIT TR UNIT",
+      "ticker": "PLZ-UN.TO",
+      "currency": "CAD",
+      "quantity": 132106,
+      "market_value": 595798,
+      "sector": "Real Estate"
+    },
+    {
+      "name": "POWER CORP OF CANADA SUB-VTG",
+      "ticker": "POW.TO",
+      "currency": "CAD",
+      "quantity": 19110,
+      "market_value": 1309417,
+      "sector": "Financials"
+    },
+    {
+      "name": "ROYAL BANK OF CANADA",
+      "ticker": "RY.TO",
+      "currency": "CAD",
+      "quantity": 42911,
+      "market_value": 9786712,
+      "sector": "Financials"
+    },
+    {
+      "name": "ROYAL BANK OF CANADA COMPOSITE",
+      "ticker": "RY",
+      "currency": "USD",
+      "quantity": 3050,
+      "market_value": 697240,
+      "sector": "Financials"
+    },
+    {
+      "name": "SMARTCENTRES REAL ESTATE INVESTMENT TRUST VAR VTG UNIT",
+      "ticker": "SRU-UN.TO",
+      "currency": "CAD",
+      "quantity": 65063,
+      "market_value": 1806800,
+      "sector": "Real Estate"
+    },
+    {
+      "name": "TORONTO-DOMINION BANK",
+      "ticker": "TD.TO",
+      "currency": "CAD",
+      "quantity": 60096,
+      "market_value": 7985556,
+      "sector": "Financials"
+    },
+    {
+      "name": "VISA INC CL A COMMON STOCK",
+      "ticker": "V",
+      "currency": "USD",
+      "quantity": 8055,
+      "market_value": 3525121,
+      "sector": "Financials"
+    },
+    {
+      "name": "APPLE INC",
+      "ticker": "AAPL",
+      "currency": "USD",
+      "quantity": 18101,
+      "market_value": 6536888,
+      "sector": "Technology"
+    },
+    {
+      "name": "CGI INC CL A SUB VTG",
+      "ticker": "GIB-A.TO",
+      "currency": "CAD",
+      "quantity": 2348,
+      "market_value": 234236,
+      "sector": "Technology"
+    },
+    {
+      "name": "MICROSOFT CORP",
+      "ticker": "MSFT",
+      "currency": "USD",
+      "quantity": 7054,
+      "market_value": 3787120,
+      "sector": "Technology"
+    },
+    {
+      "name": "NVIDIA CORP",
+      "ticker": "NVDA",
+      "currency": "USD",
+      "quantity": 1464,
+      "market_value": 354608,
+      "sector": "Technology"
+    },
+    {
+      "name": "ORACLE CORPORATION",
+      "ticker": "ORCL",
+      "currency": "USD",
+      "quantity": 887,
+      "market_value": 176302,
+      "sector": "Technology"
+    },
+    {
+      "name": "ALPHABET INC CLASS A COMMON STOCK",
+      "ticker": "GOOGL",
+      "currency": "USD",
+      "quantity": 20243,
+      "market_value": 8627079,
+      "sector": "Technology"
+    },
+    {
+      "name": "ALPHABET INC CLASS C CAPITAL STOCK",
+      "ticker": "GOOG",
+      "currency": "USD",
+      "quantity": 1462,
+      "market_value": 622410,
+      "sector": "Telecommunications"
+    },
+    {
+      "name": "AMAZON.COM CDR CAD HEDGED CIBC DEPOSITARY RECEIPTS REG S",
+      "ticker": "AMZN.TO",
+      "currency": "CAD",
+      "quantity": 78629,
+      "market_value": 1909112,
+      "sector": "Telecommunications"
+    },
+    {
+      "name": "AMAZON.COM INC",
+      "ticker": "AMZN",
+      "currency": "USD",
+      "quantity": 8118,
+      "market_value": 2330434,
+      "sector": "Technology"
+    },
+    {
+      "name": "BCE INC COM NEW",
+      "ticker": "BCE.TO",
+      "currency": "CAD",
+      "quantity": 17248,
+      "market_value": 618341,
+      "sector": "Telecommunications"
+    },
+    {
+      "name": "MERCADOLIBRE INC",
+      "ticker": "MELI",
+      "currency": "USD",
+      "quantity": 250,
+      "market_value": 600653,
+      "sector": "Technology"
+    },
+    {
+      "name": "META PLATFORMS INC CLASS A COMMON STOCK",
+      "ticker": "META",
+      "currency": "USD",
+      "quantity": 7979,
+      "market_value": 7069889,
+      "sector": "Technology"
+    },
+    {
+      "name": "SHOPIFY INC CL A",
+      "ticker": "SHOP.TO",
+      "currency": "CAD",
+      "quantity": 4368,
+      "market_value": 719279,
+      "sector": "Telecommunications"
+    },
+    {
+      "name": "SHOPIFY INC CL A",
+      "ticker": "SHOP",
+      "currency": "USD",
+      "quantity": 2626,
+      "market_value": 433390,
+      "sector": "Telecommunications"
+    },
+    {
+      "name": "TELUS CORPORATION",
+      "ticker": "T.TO",
+      "currency": "CAD",
+      "quantity": 399690,
+      "market_value": 7474203,
+      "sector": "Telecommunications"
+    },
+    {
+      "name": "UBER TECHNOLOGIES INC COMMON STOCK",
+      "ticker": "UBER",
+      "currency": "USD",
+      "quantity": 24243,
+      "market_value": 2499432,
+      "sector": "Technology"
+    },
+    {
+      "name": "VERIZON COMMUNICATIONS",
+      "ticker": "VZ",
+      "currency": "USD",
+      "quantity": 2000,
+      "market_value": 137083,
+      "sector": "Telecommunications"
+    },
+    {
+      "name": "BROOKFIELD INFRASTRUCTURE CORP NEW EXCHANGBLE SUB VOTING SHS CL A",
+      "ticker": "BIPC.TO",
+      "currency": "CAD",
+      "quantity": 26468,
+      "market_value": 1800353,
+      "sector": "Utilities"
+    },
+    {
+      "name": "BROOKFIELD RENEWABLE CORP NEW CL A EXCHANGEABLE SUBORDINATE VOTING SHARES",
+      "ticker": "BEPC",
+      "currency": "USD",
+      "quantity": 25641,
+      "market_value": 1497739,
+      "sector": "Utilities"
+    },
+    {
+      "name": "BROOKFIELD RENEWABLE PARTNERS L P",
+      "ticker": "BEP-UN.TO",
+      "currency": "CAD",
+      "quantity": 103617,
+      "market_value": 4493869,
+      "sector": "Utilities"
+    },
+    {
+      "name": "BROOKFIELD RENEWABLE PARTNERS L P",
+      "ticker": "BEP",
+      "currency": "USD",
+      "quantity": 13566,
+      "market_value": 589351,
+      "sector": "Utilities"
+    },
+    {
+      "name": "CAPITAL POWER CORPORATION",
+      "ticker": "CPX.TO",
+      "currency": "CAD",
+      "quantity": 35779,
+      "market_value": 2290929,
+      "sector": "Utilities"
+    },
+    {
+      "name": "EMERA INC",
+      "ticker": "EMA.TO",
+      "currency": "CAD",
+      "quantity": 1800,
+      "market_value": 127746,
+      "sector": "Utilities"
+    },
+    {
+      "name": "FORTIS INC",
+      "ticker": "FTS.TO",
+      "currency": "CAD",
+      "quantity": 38272,
+      "market_value": 3003204,
+      "sector": "Utilities"
+    },
+    {
+      "name": "BRISTOL GATE CONCENTRATED US EQUITY ETF TR UNIT",
+      "ticker": "BGU.TO",
+      "currency": "CAD",
+      "quantity": 8415,
+      "market_value": 419656,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "BRISTOL GATE CONCENTRATED US EQUITY ETF USD TR UNIT",
+      "ticker": "BGU-U.TO",
+      "currency": "USD",
+      "quantity": 9946,
+      "market_value": 499252,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "FRANKLIN FTSE INDIA INDEX ETF ETF",
+      "ticker": "FID",
+      "currency": "CAD",
+      "quantity": 16668,
+      "market_value": 327193,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "INVESCO EXCHANGE TRADED FUND TRUST INVESCO S&P 500 EQUAL WEIGHT ETF",
+      "ticker": "RSP",
+      "currency": "USD",
+      "quantity": 1637,
+      "market_value": 458678,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "ISHARES TRUST ISHARES U S AEROSPACE & DEFENSE ETF",
+      "ticker": "ITA",
+      "currency": "USD",
+      "quantity": 600,
+      "market_value": 199899,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "MANULIFE SMART INTL DIVID ETF UNHEDGED UNIT",
+      "ticker": "IDIV-B.TO",
+      "currency": "CAD",
+      "quantity": 105527,
+      "market_value": 2109485,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "SPROTT FDS TR SPROTT ACTIVE METALS & MINERS ETF",
+      "ticker": "METL",
+      "currency": "USD",
+      "quantity": 7555,
+      "market_value": 333211,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "VANECK ETF TRUST VANECK GOLD MINERS ETF",
+      "ticker": "GDX",
+      "currency": "USD",
+      "quantity": 1100,
+      "market_value": 174189,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "VANECK ETF TRUST VANECK JUNIOR GOLD MINERS ETF",
+      "ticker": "GDXJ",
+      "currency": "USD",
+      "quantity": 750,
+      "market_value": 160134,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "VANGUARD FTSE DEVELOPED ALL CAP EX NORTH AMER INDEX ETF UNIT",
+      "ticker": "VIU.TO",
+      "currency": "CAD",
+      "quantity": 15692,
+      "market_value": 754785,
+      "sector": "ETF - Equity"
+    },
+    {
+      "name": "ISHARES ETHEREUM TRUST ETF",
+      "ticker": "ETHA",
+      "currency": "USD",
+      "quantity": 60193,
+      "market_value": 1194761,
+      "sector": "Digital Assets"
+    },
+    {
+      "name": "ISHARES GOLD BULLION ETF HEDGED COM UNIT",
+      "ticker": "CGL.TO",
+      "currency": "CAD",
+      "quantity": 47530,
+      "market_value": 1923064,
+      "sector": "Commodities"
+    },
+    {
+      "name": "SPDR GOLD TR GOLD SHS",
+      "ticker": "GLD",
+      "currency": "USD",
+      "quantity": 18047,
+      "market_value": 11934233,
+      "sector": "Commodities"
+    },
+    {
+      "name": "SPROTT PHYSICAL SILVER TRUST UNIT",
+      "ticker": "PSLV.TO",
+      "currency": "CAD",
+      "quantity": 3449,
+      "market_value": 142401,
+      "sector": "Other"
+    }
   ]
 }
