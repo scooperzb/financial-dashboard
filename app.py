@@ -56,8 +56,31 @@ logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 CUSTOM_CSS = """
 <style>
-/* ── Global ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* ── Google Font ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Design Tokens ── */
+:root {
+    --bg-base: #080c14;
+    --bg-surface: #0f1420;
+    --bg-card: #111827;
+    --bg-elevated: #1a2235;
+    --border-subtle: #1c2536;
+    --border-default: #243044;
+    --border-hover: #344563;
+    --text-primary: #edf2f7;
+    --text-secondary: #8896ab;
+    --text-muted: #576678;
+    --accent-blue: #4f8ff7;
+    --accent-green: #2dd4a8;
+    --accent-red: #f06060;
+    --accent-amber: #f5a623;
+    --accent-cyan: #22d3ee;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-pill: 20px;
+}
 
 html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -75,145 +98,185 @@ header[data-testid="stHeader"] .stActionButton {
 
 /* ── Main container ── */
 .main .block-container {
-    padding-top: 2rem;
+    padding-top: 1.5rem;
     padding-bottom: 2rem;
     max-width: 1400px;
 }
 
 /* ── Section headers ── */
 .section-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #1e293b;
+    letter-spacing: 0.12em;
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
-/* ── Dashboard title bar ── */
-.title-bar {
-    margin-bottom: 0.25rem;
+/* ── Hero Section ── */
+.hero {
+    padding: 0.5rem 0 0.75rem 0;
 }
-.title-bar h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-    color: #f1f5f9;
-}
-.title-bar .title-meta {
+.hero-top {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.15rem;
 }
-.title-bar .meta-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 0.4rem 0.9rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #e2e8f0;
-}
-.title-bar .meta-chip .meta-icon {
+.hero h1 {
     font-size: 1rem;
-}
-.title-bar .meta-chip .meta-label {
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 400;
+    font-weight: 600;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-right: 0.3rem;
+    letter-spacing: 0.08em;
+    margin: 0;
 }
-.title-bar .market-status {
+.hero-status {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 500;
-    color: #64748b;
+    color: var(--text-muted);
 }
-.title-bar .market-status .dot {
-    width: 8px; height: 8px;
+.hero-status .dot {
+    width: 7px; height: 7px;
     border-radius: 50%;
     display: inline-block;
 }
-.title-bar .market-status .dot.open { background: #34d399; box-shadow: 0 0 6px #34d39966; }
-.title-bar .market-status .dot.closed { background: #f87171; }
+.hero-status .dot.open {
+    background: var(--accent-green);
+    box-shadow: 0 0 8px rgba(45, 212, 168, 0.35);
+}
+.hero-status .dot.closed { background: var(--accent-red); }
+
+.hero-value {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.15rem 0;
+}
+.hero-change {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+.hero-change.positive { color: var(--accent-green); }
+.hero-change.negative { color: var(--accent-red); }
+.hero-change .pnl-label {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+.hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+.hero-meta .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: border-color 0.2s;
+}
+.hero-meta .chip:hover {
+    border-color: var(--border-default);
+}
+.hero-meta .chip .label {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
 
 /* ── Top/Bottom movers strip ── */
 .movers-strip {
     display: flex;
-    gap: 0.6rem;
-    margin: 1rem 0 0.5rem 0;
+    gap: 0.4rem;
+    margin: 0.4rem 0 0.2rem 0;
     flex-wrap: wrap;
 }
 .mover-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem 0.75rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
+    gap: 0.25rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.72rem;
     font-weight: 600;
     border: 1px solid;
 }
 .mover-chip.gainer {
-    background: #34d39912;
-    color: #34d399;
-    border-color: #34d39933;
+    background: rgba(45, 212, 168, 0.06);
+    color: var(--accent-green);
+    border-color: rgba(45, 212, 168, 0.18);
 }
 .mover-chip.loser {
-    background: #f8717112;
-    color: #f87171;
-    border-color: #f8717133;
+    background: rgba(240, 96, 96, 0.06);
+    color: var(--accent-red);
+    border-color: rgba(240, 96, 96, 0.18);
 }
 
 /* ── Metric cards ── */
 .metric-row {
     display: flex;
-    gap: 1rem;
-    margin: 1rem 0 1.5rem 0;
+    gap: 0.75rem;
+    margin: 0.75rem 0 1.25rem 0;
 }
 .metric-card {
     flex: 1;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    border: 1px solid #334155;
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.2rem 1.4rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.metric-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 .metric-card .label {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.35rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
 }
 .metric-card .value {
-    font-size: 1.65rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #f1f5f9;
+    color: var(--text-primary);
     line-height: 1.2;
 }
 .metric-card .delta {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    margin-top: 0.35rem;
+    color: var(--text-muted);
 }
-.metric-card .delta.positive { color: #34d399; }
-.metric-card .delta.negative { color: #f87171; }
+.metric-card .delta.positive { color: var(--accent-green); }
+.metric-card .delta.negative { color: var(--accent-red); }
 
 /* ── Data table refinements ── */
 div[data-testid="stDataFrame"] {
-    border: 1px solid #1e293b;
-    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
     overflow: hidden;
 }
 div[data-testid="stDataFrame"] table {
@@ -222,53 +285,54 @@ div[data-testid="stDataFrame"] table {
 
 /* ── News cards ── */
 .news-card {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
     padding: 1rem 1.25rem;
-    margin-bottom: 0.6rem;
-    transition: border-color 0.2s ease;
+    margin-bottom: 0.5rem;
+    transition: border-color 0.2s ease, transform 0.15s ease;
 }
 .news-card:hover {
-    border-color: #334155;
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
 }
 .news-card .news-top {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 0.45rem;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
     flex-wrap: wrap;
 }
 .news-card .ticker-badge {
     display: inline-block;
     padding: 2px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius-pill);
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.7rem;
     letter-spacing: 0.03em;
 }
 .news-card .sentiment-badge {
     font-weight: 600;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
 }
 .news-card .publisher {
-    font-size: 0.78rem;
-    color: #475569;
+    font-size: 0.7rem;
+    color: var(--text-muted);
     margin-left: auto;
 }
 .news-card .headline {
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     font-weight: 500;
-    line-height: 1.45;
-    color: #e2e8f0;
+    line-height: 1.5;
+    color: var(--text-secondary);
 }
 .news-card .headline a {
-    color: #e2e8f0;
+    color: var(--text-secondary);
     text-decoration: none;
+    transition: color 0.15s ease;
 }
 .news-card .headline a:hover {
-    color: #38bdf8;
-    text-decoration: underline;
+    color: var(--accent-blue);
 }
 
 /* ── 52-Week Range Bar ── */
@@ -277,90 +341,109 @@ div[data-testid="stDataFrame"] table {
 }
 .range-bar {
     position: relative;
-    height: 8px;
-    background: linear-gradient(to right, #f87171, #facc15, #34d399);
-    border-radius: 4px;
+    height: 6px;
+    background: linear-gradient(to right, var(--accent-red), var(--accent-amber), var(--accent-green));
+    border-radius: 3px;
     margin: 0.5rem 0 0.25rem 0;
 }
 .range-bar .marker {
     position: absolute;
-    top: -4px;
+    top: -5px;
     width: 16px; height: 16px;
-    background: #f1f5f9;
-    border: 2px solid #0f172a;
+    background: var(--text-primary);
+    border: 2px solid var(--bg-card);
     border-radius: 50%;
     transform: translateX(-50%);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 .range-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 0.7rem;
-    color: #64748b;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 500;
 }
 
 /* ── Sidebar styling ── */
 section[data-testid="stSidebar"] {
-    background: #0a0f1a;
-    border-right: 1px solid #1e293b;
+    background: #060a12;
+    border-right: 1px solid var(--border-subtle);
 }
 section[data-testid="stSidebar"] .stButton > button {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
-    color: #e2e8f0;
-    border: 1px solid #334155;
-    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
     font-weight: 500;
     transition: all 0.2s ease;
 }
 section[data-testid="stSidebar"] .stButton > button:hover {
-    border-color: #38bdf8;
-    color: #38bdf8;
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    background: rgba(79, 143, 247, 0.05);
 }
 
 /* ── Dividers ── */
 hr {
     border: none;
-    border-top: 1px solid #1e293b;
-    margin: 1.5rem 0;
+    border-top: 1px solid var(--border-subtle);
+    margin: 2rem 0;
 }
 
 /* ── Footer ── */
 .footer-text {
     text-align: center;
-    font-size: 0.75rem;
-    color: #475569;
-    padding: 1rem 0;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 1.5rem 0;
+    letter-spacing: 0.02em;
 }
 
 /* ── Tabs styling ── */
 .stTabs [data-baseweb="tab-list"] {
     gap: 0;
-    background: #0f172a;
-    border-radius: 10px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
     padding: 4px;
-    border: 1px solid #334155;
+    border: 1px solid var(--border-subtle);
     margin-bottom: 1rem;
     overflow-x: auto;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
 }
 .stTabs [data-baseweb="tab"] {
-    padding: 0.6rem 1.2rem;
-    font-size: 0.95rem;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    color: #94a3b8;
-    border-radius: 8px;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
     border: none;
     white-space: nowrap;
     flex-shrink: 0;
+    transition: color 0.2s ease;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: var(--text-secondary);
 }
 .stTabs [aria-selected="true"] {
-    background: #1e293b !important;
-    color: #f1f5f9 !important;
+    background: var(--bg-elevated) !important;
+    color: var(--text-primary) !important;
 }
 
 /* ── FX Popover sizing ── */
 [data-testid="stPopover"] > div {
     min-width: 420px;
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+/* ── Multiselect / filter styling ── */
+div[data-baseweb="select"] {
+    font-size: 0.85rem;
 }
 </style>
 """
@@ -816,18 +899,18 @@ def build_model_composition(model_df: pd.DataFrame,
 # ──────────────────────────────────────────────────────────────────────────────
 
 SECTOR_COLORS = {
-    "Financials": "#6366f1", "Technology": "#22c55e", "Energy": "#ef4444",
-    "Utilities": "#a855f7", "Industrials": "#f97316", "Healthcare": "#06b6d4",
-    "Consumer Staples": "#ec4899", "Consumer Discretionary": "#84cc16",
-    "Real Estate": "#d946ef", "Telecommunications": "#eab308",
-    "Commodities": "#facc15", "Digital Assets": "#f59e0b", "ETF - Equity": "#6b7280",
-    "Cash": "#94a3b8",
+    "Financials": "#818cf8", "Technology": "#34d399", "Energy": "#f87171",
+    "Utilities": "#c084fc", "Industrials": "#fb923c", "Healthcare": "#22d3ee",
+    "Consumer Staples": "#f472b6", "Consumer Discretionary": "#a3e635",
+    "Real Estate": "#e879f9", "Telecommunications": "#fbbf24",
+    "Commodities": "#fcd34d", "Digital Assets": "#f59e0b", "ETF - Equity": "#94a3b8",
+    "Cash": "#64748b",
 }
 
 SENTIMENT_STYLE = {
-    "Bullish":  ("▲", "#34d399"),
-    "Bearish":  ("▼", "#f87171"),
-    "Neutral":  ("—", "#64748b"),
+    "Bullish":  ("▲", "#2dd4a8"),
+    "Bearish":  ("▼", "#f06060"),
+    "Neutral":  ("—", "#576678"),
 }
 
 
@@ -844,11 +927,11 @@ def make_donut(labels, values, title, colors=None, center_text=None,
         ht = "<b>%{label}</b><br>$%{value:,.0f}<extra></extra>"
 
     fig = go.Figure(go.Pie(
-        labels=legend_labels, values=values, hole=0.55,
+        labels=legend_labels, values=values, hole=0.6,
         marker=dict(
             colors=colors,
-            line=dict(color="#0f172a", width=2),
-        ) if colors else dict(line=dict(color="#0f172a", width=2)),
+            line=dict(color="#080c14", width=2),
+        ) if colors else dict(line=dict(color="#080c14", width=2)),
         textinfo="none",
         hovertemplate=ht,
         sort=True, direction="clockwise",
@@ -859,14 +942,15 @@ def make_donut(labels, values, title, colors=None, center_text=None,
 
     fig.update_layout(
         title=dict(
-            text=title, font=dict(size=13, color="#94a3b8", family="Inter"),
+            text=title,
+            font=dict(size=11, color="#576678", family="Inter", weight=700),
             x=0.5, xanchor="center", y=0.97,
         ),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        height=520, margin=dict(l=10, r=10, t=40, b=10),
+        height=500, margin=dict(l=10, r=10, t=40, b=10),
         showlegend=True,
         legend=dict(
-            font=dict(size=12, color="#cbd5e1", family="Inter"),
+            font=dict(size=11, color="#8896ab", family="Inter"),
             orientation="h",
             yanchor="top", y=-0.02,
             xanchor="center", x=0.5,
@@ -877,7 +961,7 @@ def make_donut(labels, values, title, colors=None, center_text=None,
         ),
         annotations=[dict(
             text=center_text,
-            x=0.5, y=0.5, font=dict(size=20, color="#e2e8f0", family="Inter"),
+            x=0.5, y=0.5, font=dict(size=22, color="#edf2f7", family="Inter"),
             showarrow=False,
         )],
     )
@@ -897,8 +981,8 @@ def make_fx_chart(fx_df: pd.DataFrame) -> go.Figure:
     # Area fill from y_min baseline (not zero)
     fig.add_trace(go.Scatter(
         x=dates, y=closes, mode="lines",
-        line=dict(color="#38bdf8", width=2.5),
-        fill="tonexty", fillcolor="rgba(56, 189, 248, 0.10)",
+        line=dict(color="#4f8ff7", width=2),
+        fill="tonexty", fillcolor="rgba(79, 143, 247, 0.08)",
         hovertemplate="<b>%{x|%b %d}</b><br>USD/CAD: %{y:.4f}<extra></extra>",
     ))
 
@@ -906,16 +990,16 @@ def make_fx_chart(fx_df: pd.DataFrame) -> go.Figure:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         height=220, margin=dict(l=0, r=0, t=10, b=0),
-        font=dict(color="#cbd5e1", family="Inter", size=11),
+        font=dict(color="#8896ab", family="Inter", size=11),
         hovermode="x unified",
         showlegend=False,
         xaxis=dict(
             showgrid=False, zeroline=False,
             tickformat="%b %d",
-            linecolor="#334155",
+            linecolor="#243044",
         ),
         yaxis=dict(
-            showgrid=True, gridcolor="#1e293b", zeroline=False,
+            showgrid=True, gridcolor="#1c2536", zeroline=False,
             tickformat=".4f",
             side="right",
             range=[y_min - y_pad, y_max + y_pad],
@@ -982,6 +1066,17 @@ def main():
     gainers = len(valid[valid["Day Change %"] > 0])
     losers = len(valid[valid["Day Change %"] < 0])
 
+    # Portfolio value & day PnL
+    total_value = table["Value (CAD)"].sum()
+    if not valid.empty and total_value > 0:
+        weighted_day_chg = (
+            (valid["Value (CAD)"] * valid["Day Change %"]).sum() / total_value
+        )
+        day_pnl = total_value * weighted_day_chg / 100
+    else:
+        weighted_day_chg = 0
+        day_pnl = 0
+
     # ══════════════════════════════════════════════════════════════════════
     # HEADER
     # ══════════════════════════════════════════════════════════════════════
@@ -1014,26 +1109,37 @@ def main():
     num_positions = meta.get("total_positions", len(holdings))
     refresh_time = now_et.strftime("%I:%M %p ET")
 
+    pnl_sign = "positive" if day_pnl >= 0 else "negative"
+    pnl_arrow = "▲" if day_pnl >= 0 else "▼"
+
     st.markdown(
         f"""
-        <div class="title-bar">
-            <h1>Portfolio Holdings</h1>
-            <div class="title-meta">
-                <span class="meta-chip">
-                    <span class="meta-label">As of</span>
-                    <span class="meta-icon">📅</span> {report_date}
-                </span>
-                <span class="meta-chip">
-                    <span class="meta-label">Positions</span>
-                    <span class="meta-icon">📊</span> {num_positions}
-                </span>
-                <span class="meta-chip">
-                    <span style="color:#34d399;">{gainers} ▲</span>
-                    &nbsp;/&nbsp;
-                    <span style="color:#f87171;">{losers} ▼</span>
-                </span>
-                <span class="market-status">
+        <div class="hero">
+            <div class="hero-top">
+                <h1>Portfolio Holdings</h1>
+                <span class="hero-status">
                     <span class="dot {market_dot}"></span> {market_label}
+                </span>
+            </div>
+            <div class="hero-value">${total_value:,.0f}</div>
+            <div class="hero-change {pnl_sign}">
+                {pnl_arrow} ${abs(day_pnl):,.0f} ({weighted_day_chg:+.2f}%)
+                <span class="pnl-label">&nbsp;today</span>
+            </div>
+            <div class="hero-meta">
+                <span class="chip">
+                    <span class="label">As of</span> {report_date}
+                </span>
+                <span class="chip">
+                    <span class="label">Positions</span> {num_positions}
+                </span>
+                <span class="chip">
+                    <span style="color:#2dd4a8;">{gainers} ▲</span>
+                    &nbsp;/&nbsp;
+                    <span style="color:#f06060;">{losers} ▼</span>
+                </span>
+                <span class="chip">
+                    <span class="label">FX</span> USD/CAD {fx_rate:.4f}
                 </span>
             </div>
             <div class="movers-strip">
@@ -1054,7 +1160,7 @@ def main():
             first_val = closes.iloc[0]
             last_val = closes.iloc[-1]
             change_pct = ((last_val - first_val) / first_val) * 100
-            change_color = "#34d399" if change_pct >= 0 else "#f87171"
+            change_color = "#2dd4a8" if change_pct >= 0 else "#f06060"
             change_arrow = "▲" if change_pct >= 0 else "▼"
 
             st.plotly_chart(make_fx_chart(fx_hist), use_container_width=True,
@@ -1063,9 +1169,9 @@ def main():
             st.markdown(
                 f"""
                 <div style="display:flex; justify-content:space-between;
-                            font-size:0.8rem; color:#94a3b8; padding:0 0.2rem;">
-                    <span>30d High: <b style="color:#e2e8f0;">{hi:.4f}</b></span>
-                    <span>30d Low: <b style="color:#e2e8f0;">{lo:.4f}</b></span>
+                            font-size:0.78rem; color:#8896ab; padding:0 0.2rem;">
+                    <span>30d High: <b style="color:#edf2f7;">{hi:.4f}</b></span>
+                    <span>30d Low: <b style="color:#edf2f7;">{lo:.4f}</b></span>
                     <span>Change:
                         <b style="color:{change_color};">
                             {change_arrow} {abs(change_pct):.2f}%
@@ -1115,8 +1221,8 @@ def main():
 
         def color_day_change(val):
             if pd.isna(val):
-                return "color: #475569"
-            return "color: #34d399" if val >= 0 else "color: #f87171"
+                return "color: #576678"
+            return "color: #2dd4a8" if val >= 0 else "color: #f06060"
 
         styled = (
             display.style
@@ -1168,15 +1274,15 @@ def main():
 
             def color_divergence(val):
                 if pd.isna(val) or val == 0:
-                    return "color: #64748b"
-                return "color: #34d399" if val > 0 else "color: #f87171"
+                    return "color: #576678"
+                return "color: #2dd4a8" if val > 0 else "color: #f06060"
 
             def color_status(val):
                 if val == "Model Only":
-                    return "color: #f87171"
+                    return "color: #f06060"
                 if val == "Not in Model":
-                    return "color: #f59e0b"
-                return "color: #94a3b8"
+                    return "color: #f5a623"
+                return "color: #8896ab"
 
             styled_model = (
                 display_model.style
@@ -1204,30 +1310,22 @@ def main():
                     <div class="metric-card">
                         <div class="label">Total Positions</div>
                         <div class="value">{total_positions}</div>
-                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                            Model constituents
-                        </div>
+                        <div class="delta">Model constituents</div>
                     </div>
                     <div class="metric-card">
                         <div class="label">Matched Positions</div>
-                        <div class="value" style="color:#34d399;">{in_both}</div>
-                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                            In both model & portfolio
-                        </div>
+                        <div class="value" style="color:#2dd4a8;">{in_both}</div>
+                        <div class="delta">In both model & portfolio</div>
                     </div>
                     <div class="metric-card">
                         <div class="label">Model Only</div>
-                        <div class="value" style="color:#f87171;">{model_only}</div>
-                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                            In model but not held
-                        </div>
+                        <div class="value" style="color:#f06060;">{model_only}</div>
+                        <div class="delta">In model but not held</div>
                     </div>
                     <div class="metric-card">
                         <div class="label">Avg. Abs. Divergence</div>
                         <div class="value">{avg_div:.2f}%</div>
-                        <div class="delta" style="color:#64748b; font-size:0.78rem;">
-                            Mean |actual - target|
-                        </div>
+                        <div class="delta">Mean |actual - target|</div>
                     </div>
                 </div>
                 """,
@@ -1248,7 +1346,7 @@ def main():
 
             with m_chart_left:
                 curr_colors = [
-                    "#34d399" if c == "CAD" else "#f87171"
+                    "#2dd4a8" if c == "CAD" else "#f06060"
                     for c in currency_agg.index
                 ]
                 total_equity_pct = model_meta.get("total_equity_pct",
@@ -1309,7 +1407,7 @@ def main():
         curr_agg = merged.groupby("Currency")["Value (CAD)"].sum()
         fig_curr = make_donut(
             curr_agg.index.tolist(), curr_agg.values.tolist(),
-            "CURRENCY EXPOSURE", ["#34d399", "#f87171"],
+            "CURRENCY EXPOSURE", ["#2dd4a8", "#f06060"],
         )
         st.plotly_chart(fig_curr, use_container_width=True)
 
@@ -1353,38 +1451,38 @@ def main():
             <div class="metric-row">
                 <div class="metric-card">
                     <div class="label">Weighted P/E (Trailing)</div>
-                    <div class="value" style="font-size:1.6rem;">
+                    <div class="value">
                         {f'{w_pe:.1f}x' if w_pe else '—'}
                     </div>
-                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                    <div class="delta">
                         {f'Forward: {w_fpe:.1f}x' if w_fpe else 'Forward: —'}
                         &nbsp;&middot;&nbsp; Coverage: {pe_cov:.0f}%
                     </div>
                 </div>
                 <div class="metric-card">
                     <div class="label">Weighted Dividend Yield</div>
-                    <div class="value" style="font-size:1.6rem; color:#34d399;">
+                    <div class="value" style="color:#2dd4a8;">
                         {f'{w_yield*100:.2f}%' if w_yield else '—'}
                     </div>
-                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                    <div class="delta">
                         {f'~${metrics["total_value"]*w_yield/1e6:.1f}M annual income' if w_yield else ''}
                     </div>
                 </div>
                 <div class="metric-card">
                     <div class="label">Weighted Beta</div>
-                    <div class="value" style="font-size:1.6rem;">
+                    <div class="value">
                         {f'{w_beta:.2f}' if w_beta else '—'}
                     </div>
-                    <div class="delta" style="color:{'#34d399' if w_beta and w_beta < 1 else '#f87171' if w_beta and w_beta > 1 else '#64748b'}; font-size:0.78rem;">
+                    <div class="delta" style="color:{'#2dd4a8' if w_beta and w_beta < 1 else '#f06060' if w_beta and w_beta > 1 else 'var(--text-muted)'};">
                         {'Lower volatility than market' if w_beta and w_beta < 1 else 'Higher volatility than market' if w_beta and w_beta > 1 else ''}
                     </div>
                 </div>
                 <div class="metric-card">
                     <div class="label">52-Week Positioning</div>
-                    <div class="value" style="font-size:1.6rem;">
+                    <div class="value">
                         {f'{w_52w:.0f}%' if w_52w is not None else '—'}
                     </div>
-                    <div class="delta" style="color:#64748b; font-size:0.78rem;">
+                    <div class="delta">
                         {near_hi} near highs &nbsp;&middot;&nbsp; {near_lo} near lows
                     </div>
                     <div class="range-bar-container">
@@ -1424,7 +1522,7 @@ def main():
             arrow, sent_color = SENTIMENT_STYLE.get(item["sentiment"], ("—", "#64748b"))
 
             chg = item["day_change"]
-            chg_color = "#34d399" if chg >= 0 else "#f87171"
+            chg_color = "#2dd4a8" if chg >= 0 else "#f06060"
             chg_arrow = "▲" if chg >= 0 else "▼"
 
             st.markdown(

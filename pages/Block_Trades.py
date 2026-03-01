@@ -35,7 +35,29 @@ logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 PAGE_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --bg-base: #080c14;
+    --bg-surface: #0f1420;
+    --bg-card: #111827;
+    --bg-elevated: #1a2235;
+    --border-subtle: #1c2536;
+    --border-default: #243044;
+    --border-hover: #344563;
+    --text-primary: #edf2f7;
+    --text-secondary: #8896ab;
+    --text-muted: #576678;
+    --accent-blue: #4f8ff7;
+    --accent-green: #2dd4a8;
+    --accent-red: #f06060;
+    --accent-amber: #f5a623;
+    --accent-cyan: #22d3ee;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-pill: 20px;
+}
 
 html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -46,21 +68,21 @@ footer {visibility: hidden;}
 header {visibility: hidden;}
 
 .main .block-container {
-    padding-top: 2rem;
+    padding-top: 1.5rem;
     padding-bottom: 2rem;
     max-width: 1400px;
 }
 
 /* ── Section headers ── */
 .section-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #1e293b;
+    letter-spacing: 0.12em;
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 /* ── Title bar ── */
@@ -69,210 +91,227 @@ header {visibility: hidden;}
 }
 .title-bar h1 {
     font-size: 2rem;
-    font-weight: 700;
+    font-weight: 800;
     margin: 0 0 0.5rem 0;
-    color: #f1f5f9;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
 }
 .title-bar .title-meta {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 .title-bar .meta-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 0.4rem 0.9rem;
-    font-size: 0.9rem;
+    gap: 0.3rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
     font-weight: 500;
-    color: #e2e8f0;
+    color: var(--text-secondary);
 }
 .title-bar .meta-chip .meta-label {
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-right: 0.3rem;
 }
 
 /* ── Metric cards ── */
 .metric-row {
     display: flex;
-    gap: 1rem;
-    margin: 1rem 0 1.5rem 0;
+    gap: 0.75rem;
+    margin: 0.75rem 0 1.25rem 0;
 }
 .metric-card {
     flex: 1;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    border: 1px solid #334155;
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.2rem 1.4rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.metric-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 .metric-card .label {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.35rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
 }
 .metric-card .value {
-    font-size: 1.65rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #f1f5f9;
+    color: var(--text-primary);
     line-height: 1.2;
 }
 .metric-card .delta {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    margin-top: 0.35rem;
+    color: var(--text-muted);
 }
-.metric-card .delta.positive { color: #34d399; }
-.metric-card .delta.negative { color: #f87171; }
+.metric-card .delta.positive { color: var(--accent-green); }
+.metric-card .delta.negative { color: var(--accent-red); }
 
 /* ── Block Trade Cards ── */
 .trade-card {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
     padding: 1rem 1.25rem;
-    margin-bottom: 0.6rem;
-    transition: border-color 0.2s ease;
+    margin-bottom: 0.5rem;
+    transition: border-color 0.2s ease, transform 0.15s ease;
     border-left: 3px solid transparent;
 }
-.trade-card:hover { border-color: #334155; }
-.trade-card.buy  { border-left-color: #34d399; }
-.trade-card.sell { border-left-color: #f87171; }
+.trade-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+}
+.trade-card.buy  { border-left-color: var(--accent-green); }
+.trade-card.sell { border-left-color: var(--accent-red); }
 
 .trade-card .trade-top {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.5rem;
     margin-bottom: 0.4rem;
     flex-wrap: wrap;
 }
 .trade-card .trade-type-badge {
     display: inline-block;
     padding: 2px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius-pill);
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     letter-spacing: 0.03em;
 }
 .trade-card .trade-type-badge.buy {
-    background: #34d39918;
-    color: #34d399;
-    border: 1px solid #34d39944;
+    background: rgba(45, 212, 168, 0.08);
+    color: var(--accent-green);
+    border: 1px solid rgba(45, 212, 168, 0.25);
 }
 .trade-card .trade-type-badge.sell {
-    background: #f8717118;
-    color: #f87171;
-    border: 1px solid #f8717144;
+    background: rgba(240, 96, 96, 0.08);
+    color: var(--accent-red);
+    border: 1px solid rgba(240, 96, 96, 0.25);
 }
 .trade-card .trade-symbol {
     font-weight: 700;
-    font-size: 0.95rem;
-    color: #f1f5f9;
+    font-size: 0.92rem;
+    color: var(--text-primary);
 }
 .trade-card .trade-name {
-    font-size: 0.82rem;
-    color: #94a3b8;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
     font-weight: 400;
 }
 .trade-card .trade-value {
     font-weight: 600;
-    font-size: 0.95rem;
-    color: #e2e8f0;
+    font-size: 0.92rem;
+    color: var(--text-primary);
     margin-left: auto;
 }
 .trade-card .trade-details {
-    font-size: 0.82rem;
-    color: #94a3b8;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
     line-height: 1.6;
 }
 .trade-card .trade-details .detail-label {
-    color: #64748b;
+    color: var(--text-muted);
 }
 .trade-card .trade-notes {
-    font-size: 0.8rem;
-    color: #cbd5e1;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
     font-style: italic;
     margin-top: 0.35rem;
     padding-top: 0.35rem;
-    border-top: 1px solid #1e293b44;
+    border-top: 1px solid var(--border-subtle);
 }
 .trade-card .switch-indicator {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
     padding: 2px 8px;
-    border-radius: 6px;
-    background: #38bdf818;
-    color: #38bdf8;
-    border: 1px solid #38bdf844;
-    font-size: 0.72rem;
+    border-radius: var(--radius-pill);
+    background: rgba(79, 143, 247, 0.08);
+    color: var(--accent-blue);
+    border: 1px solid rgba(79, 143, 247, 0.25);
+    font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.03em;
 }
 .trade-card .pnl-badge {
     font-weight: 600;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
 }
 .trade-date-header {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin: 1rem 0 0.5rem 0;
+    letter-spacing: 0.08em;
+    margin: 1.25rem 0 0.5rem 0;
     padding-left: 0.25rem;
 }
 
 /* ── Sidebar styling ── */
 section[data-testid="stSidebar"] {
-    background: #0a0f1a;
-    border-right: 1px solid #1e293b;
+    background: #060a12;
+    border-right: 1px solid var(--border-subtle);
 }
 section[data-testid="stSidebar"] .stButton > button {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
-    color: #e2e8f0;
-    border: 1px solid #334155;
-    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
     font-weight: 500;
     transition: all 0.2s ease;
 }
 section[data-testid="stSidebar"] .stButton > button:hover {
-    border-color: #38bdf8;
-    color: #38bdf8;
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    background: rgba(79, 143, 247, 0.05);
 }
 
 hr {
     border: none;
-    border-top: 1px solid #1e293b;
-    margin: 1.5rem 0;
+    border-top: 1px solid var(--border-subtle);
+    margin: 2rem 0;
 }
 
 .footer-text {
     text-align: center;
-    font-size: 0.75rem;
-    color: #475569;
-    padding: 1rem 0;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 1.5rem 0;
+    letter-spacing: 0.02em;
 }
 
 /* ── Data table ── */
 div[data-testid="stDataFrame"] {
-    border: 1px solid #1e293b;
-    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
     overflow: hidden;
 }
 div[data-testid="stDataFrame"] table {
     font-size: 0.85rem;
 }
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 </style>
 """
 
@@ -381,28 +420,28 @@ def render_metrics(trades_df: pd.DataFrame, switches_df: pd.DataFrame,
     <div class="metric-row">
         <div class="metric-card">
             <div class="label">Total Bought</div>
-            <div class="value" style="color:#34d399; font-size:1.4rem;">
+            <div class="value" style="color:#2dd4a8;">
                 ${total_bought/1e6:.2f}M
             </div>
         </div>
         <div class="metric-card">
             <div class="label">Total Sold</div>
-            <div class="value" style="color:#f87171; font-size:1.4rem;">
+            <div class="value" style="color:#f06060;">
                 ${total_sold/1e6:.2f}M
             </div>
         </div>
         <div class="metric-card">
             <div class="label">Net Flow</div>
-            <div class="value" style="font-size:1.4rem;">
+            <div class="value">
                 ${abs(net_flow)/1e6:.2f}M
             </div>
             <div class="delta {net_class}">{net_arrow} {"Net Buying" if net_flow >= 0 else "Net Selling"}</div>
         </div>
         <div class="metric-card">
             <div class="label">Trades / Switches</div>
-            <div class="value" style="font-size:1.4rem;">
-                {num_trades} <span style="color:#64748b; font-size:0.9rem;">/</span>
-                <span style="color:#38bdf8;">{len(switches_df) if not switches_df.empty else 0}</span>
+            <div class="value">
+                {num_trades} <span style="color:#576678; font-size:0.9rem;">/</span>
+                <span style="color:#4f8ff7;">{len(switches_df) if not switches_df.empty else 0}</span>
             </div>
         </div>
     </div>
@@ -438,7 +477,7 @@ def render_trade_card(trade: dict, switch_label: str | None = None,
         if t == "sell":
             pnl_total = -pnl_total
             pnl_pct = -pnl_pct
-        pnl_color = "#34d399" if pnl_total >= 0 else "#f87171"
+        pnl_color = "#2dd4a8" if pnl_total >= 0 else "#f06060"
         pnl_arrow = "▲" if pnl_total >= 0 else "▼"
         pnl_html = (
             f'<span class="pnl-badge" style="color:{pnl_color};">'
@@ -455,9 +494,9 @@ def render_trade_card(trade: dict, switch_label: str | None = None,
     weight_html = ""
     if portfolio_weight is not None:
         weight_html = (
-            f'<span style="background:#1e293b; border:1px solid #334155; '
-            f'border-radius:6px; padding:2px 8px; font-size:0.72rem; '
-            f'color:#94a3b8; font-weight:500;">'
+            f'<span style="background:var(--bg-card); border:1px solid var(--border-subtle); '
+            f'border-radius:20px; padding:2px 8px; font-size:0.7rem; '
+            f'color:var(--text-secondary); font-weight:500;">'
             f'Portfolio: {portfolio_weight:.1f}%</span>'
         )
 
@@ -526,31 +565,31 @@ def make_flow_chart(trades_df: pd.DataFrame, fx_rate: float):
 
     grouped = valid.groupby("symbol")["value_cad"].sum().sort_values()
 
-    colors = ["#34d399" if v >= 0 else "#f87171" for v in grouped.values]
+    colors = ["#2dd4a8" if v >= 0 else "#f06060" for v in grouped.values]
 
     fig = go.Figure(go.Bar(
         x=grouped.values,
         y=grouped.index,
         orientation="h",
-        marker=dict(color=colors, line=dict(color="#0f172a", width=1)),
+        marker=dict(color=colors, line=dict(color="#080c14", width=1)),
         hovertemplate="<b>%{y}</b><br>$%{x:,.0f}<extra></extra>",
     ))
     fig.update_layout(
         title=dict(
             text="NET TRADE FLOW BY TICKER",
-            font=dict(size=13, color="#94a3b8", family="Inter"),
+            font=dict(size=11, color="#576678", family="Inter", weight=700),
             x=0.5, xanchor="center",
         ),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         height=max(200, len(grouped) * 50 + 80),
         margin=dict(l=100, r=20, t=50, b=30),
         xaxis=dict(
-            gridcolor="#1e293b", zerolinecolor="#334155",
-            tickfont=dict(color="#64748b", size=11),
+            gridcolor="#1c2536", zerolinecolor="#243044",
+            tickfont=dict(color="#576678", size=11),
             tickformat="$,.0f",
         ),
         yaxis=dict(
-            tickfont=dict(color="#e2e8f0", size=12, family="Inter"),
+            tickfont=dict(color="#edf2f7", size=12, family="Inter"),
         ),
         showlegend=False,
     )
@@ -707,11 +746,11 @@ with col_table:
 
         def color_pnl(val):
             if pd.isna(val):
-                return "color: #475569"
-            return "color: #34d399" if val >= 0 else "color: #f87171"
+                return "color: #576678"
+            return "color: #2dd4a8" if val >= 0 else "color: #f06060"
 
         def color_type(val):
-            return "color: #34d399" if val == "BUY" else "color: #f87171"
+            return "color: #2dd4a8" if val == "BUY" else "color: #f06060"
 
         styled_sum = (
             sum_df.style

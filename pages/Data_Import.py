@@ -72,7 +72,28 @@ SECTION_SECTOR_MAP = {
 
 PAGE_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --bg-base: #080c14;
+    --bg-surface: #0f1420;
+    --bg-card: #111827;
+    --bg-elevated: #1a2235;
+    --border-subtle: #1c2536;
+    --border-default: #243044;
+    --border-hover: #344563;
+    --text-primary: #edf2f7;
+    --text-secondary: #8896ab;
+    --text-muted: #576678;
+    --accent-blue: #4f8ff7;
+    --accent-green: #2dd4a8;
+    --accent-red: #f06060;
+    --accent-amber: #f5a623;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-pill: 20px;
+}
 
 html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -82,47 +103,93 @@ html, body, [class*="css"] {
 footer {visibility: hidden;}
 
 .main .block-container {
-    padding-top: 2rem;
+    padding-top: 1.5rem;
     padding-bottom: 2rem;
     max-width: 1200px;
 }
 
 .section-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #1e293b;
+    letter-spacing: 0.12em;
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .status-card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 1rem 1.2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.1rem 1.3rem;
     margin-bottom: 1rem;
+    transition: border-color 0.2s ease;
+}
+.status-card:hover {
+    border-color: var(--border-hover);
 }
 .status-card .label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
 }
 .status-card .value {
     font-size: 1.3rem;
     font-weight: 700;
-    color: #e2e8f0;
-    margin-top: 0.2rem;
+    color: var(--text-primary);
+    margin-top: 0.25rem;
 }
 .status-card .detail {
-    font-size: 0.78rem;
-    color: #94a3b8;
-    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
 }
+
+/* ── Sidebar styling ── */
+section[data-testid="stSidebar"] {
+    background: #060a12;
+    border-right: 1px solid var(--border-subtle);
+}
+section[data-testid="stSidebar"] .stButton > button {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--border-subtle);
+    margin: 2rem 0;
+}
+
+/* ── Data table ── */
+div[data-testid="stDataFrame"] {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+/* ── File uploader styling ── */
+div[data-testid="stFileUploader"] > div {
+    border-radius: var(--radius-md);
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 </style>
 """
 
