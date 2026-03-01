@@ -6,8 +6,10 @@
 ================================================================================
 """
 
+import base64
 import io
 import json
+import os
 import re
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +24,9 @@ import streamlit as st
 BASE_DIR = Path(__file__).resolve().parent.parent
 HOLDINGS_FILE = BASE_DIR / "holdings.json"
 MODELS_DIR = BASE_DIR / "models"
+
+GITHUB_REPO = "scooperzb/financial-dashboard"
+MIN_POSITION_VALUE = 100_000  # Filter out positions below $100K after consolidation
 
 SECTOR_OPTIONS = [
     "Financials", "Technology", "Energy", "Utilities", "Industrials",
@@ -249,6 +254,38 @@ def enrich_row(ticker: str) -> dict:
         "sector": "Other",
         "currency": "CAD" if ticker.endswith(".TO") else "USD",
     }
+
+
+def _push_to_github(filepath: str, content: str, message: str) -> tuple[bool, str]:
+    """Push a file to GitHub via the Contents API for cross-deploy persistence."""
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return False, "GITHUB_TOKEN not configured"
+
+    import requests
+
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{filepath}"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+
+    # Get current SHA (required to update an existing file)
+    resp = requests.get(url, headers=headers)
+    sha = resp.json().get("sha") if resp.status_code == 200 else None
+
+    payload = {
+        "message": message,
+        "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
+        "branch": "main",
+    }
+    if sha:
+        payload["sha"] = sha
+
+    resp = requests.put(url, json=payload, headers=headers)
+    if resp.status_code in (200, 201):
+        return True, "Synced to GitHub"
+    return False, f"GitHub API {resp.status_code}: {resp.json().get('message', '')}"
 
 
 def consolidate_holdings(holdings: list[dict]) -> list[dict]:
@@ -482,8 +519,11 @@ def parse_holdings_file(file_bytes: bytes, filename: str) -> tuple[list[dict], s
     if not holdings:
         return None
 
-    # Consolidate: merge same-ticker rows and cross-listed pairs
+    # Consolidate: merge same-ticker rows (long + short netting)
     holdings = consolidate_holdings(holdings)
+
+    # Remove small positions after consolidation
+    holdings = [h for h in holdings if abs(h["market_value"]) >= MIN_POSITION_VALUE]
 
     return (holdings, report_date)
 
@@ -616,10 +656,23 @@ if holdings_file is not None:
                 },
                 "holdings": parsed,
             }
+            content = json.dumps(output, indent=2)
             with open(HOLDINGS_FILE, "w", encoding="utf-8") as f:
-                json.dump(output, f, indent=2)
+                f.write(content)
             st.cache_data.clear()
-            st.success(f"Saved {len(parsed)} holdings to holdings.json")
+
+            # Push to GitHub so holdings persist across Render redeploys
+            ok, msg = _push_to_github(
+                "holdings.json", content,
+                f"Update holdings — {report_date} ({len(parsed)} positions)",
+            )
+            if ok:
+                st.success(
+                    f"Saved **{len(parsed)} positions** and synced to GitHub"
+                )
+            else:
+                st.success(f"Saved **{len(parsed)} positions** locally")
+                st.warning(f"Could not sync to GitHub: {msg}")
             st.balloons()
 
 st.markdown("---")
