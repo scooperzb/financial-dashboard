@@ -432,7 +432,9 @@ hr {
 
 /* ── FX Popover sizing ── */
 [data-testid="stPopover"] > div {
-    min-width: 440px;
+    min-width: 480px;
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 /* ── FX Impact card (inside popover) ── */
@@ -1153,14 +1155,17 @@ def main():
     # USD/CAD ▼ (USD weakens)     → USD holdings worth less in CAD → headwind
     usd_value = table[table["Currency"] == "USD"]["Value (CAD)"].sum()
     usd_pct = (usd_value / total_value * 100) if total_value > 0 else 0
-    fx_hist = fetch_fx_history("30d")
+    fx_hist_full = fetch_fx_history("1y")
     fx_30d_chg = 0.0
-    fx_impact_dollars = 0.0
-    if not fx_hist.empty:
-        fx_first = float(fx_hist["Close"].iloc[0])
-        fx_last = float(fx_hist["Close"].iloc[-1])
-        fx_30d_chg = ((fx_last - fx_first) / fx_first) * 100
-        fx_impact_dollars = usd_value * fx_30d_chg / 100
+    fx_impact_30d = 0.0
+    if not fx_hist_full.empty:
+        cutoff_30d = fx_hist_full.index[-1] - pd.Timedelta(days=30)
+        fx_30d_slice = fx_hist_full[fx_hist_full.index >= cutoff_30d]
+        if len(fx_30d_slice) >= 2:
+            fx_first = float(fx_30d_slice["Close"].iloc[0])
+            fx_last = float(fx_30d_slice["Close"].iloc[-1])
+            fx_30d_chg = ((fx_last - fx_first) / fx_first) * 100
+            fx_impact_30d = usd_value * fx_30d_chg / 100
 
     if abs(fx_30d_chg) < 0.01:
         fx_wind_label = "Neutral"
@@ -1213,63 +1218,85 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # ── FX Popover with 30-day chart + portfolio impact ──
+    # ── FX Popover with chart + portfolio impact ──
     with st.popover(f"💱 USD/CAD {fx_rate:.4f}", use_container_width=False):
-        if not fx_hist.empty:
-            closes = fx_hist["Close"]
-            hi = closes.max()
-            lo = closes.min()
-            change_color = "#2dd4a8" if fx_30d_chg >= 0 else "#f06060"
-            change_arrow = "▲" if fx_30d_chg >= 0 else "▼"
-
-            st.plotly_chart(make_fx_chart(fx_hist), use_container_width=True,
-                            key="fx_popover_chart")
-
-            st.markdown(
-                f"""
-                <div style="display:flex; justify-content:space-between;
-                            font-size:0.78rem; color:#8896ab; padding:0 0.2rem;">
-                    <span>30d High: <b style="color:#edf2f7;">{hi:.4f}</b></span>
-                    <span>30d Low: <b style="color:#edf2f7;">{lo:.4f}</b></span>
-                    <span>Change:
-                        <b style="color:{change_color};">
-                            {change_arrow} {abs(fx_30d_chg):.2f}%
-                        </b>
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True,
+        if not fx_hist_full.empty:
+            # Period selector
+            period_opt = st.radio(
+                "Period", ["30D", "90D", "6M", "1Y"],
+                horizontal=True, key="fx_period", label_visibility="collapsed",
             )
-
-            # Portfolio FX impact card
-            usd_direction = "strengthened" if fx_30d_chg > 0 else "weakened"
-            impact_arrow = "▲" if fx_impact_dollars >= 0 else "▼"
-
-            st.markdown(
-                f"""
-                <div class="fx-impact">
-                    <div class="fx-label">Portfolio FX Impact (30d)</div>
-                    <div class="fx-value" style="color:{fx_wind_color};">
-                        {impact_arrow} ${abs(fx_impact_dollars)/1e6:.2f}M &nbsp;
-                        <span style="font-size:0.85rem;">{fx_wind_label}</span>
-                    </div>
-                    <div class="fx-detail">
-                        USD {usd_direction} {abs(fx_30d_chg):.2f}% vs CAD over 30 days.<br>
-                        Your USD exposure: <b style="color:#edf2f7;">${usd_value/1e6:.1f}M</b>
-                        ({usd_pct:.0f}% of portfolio).
-                    </div>
-                    <div class="fx-explainer">
-                        USD/CAD ▲ = USD buys more CAD = your USD holdings are worth
-                        <b style="color:#2dd4a8;">more</b> in CAD
-                        <span style="color:#2dd4a8;">→ tailwind</span><br>
-                        USD/CAD ▼ = USD buys less CAD = your USD holdings are worth
-                        <b style="color:#f06060;">less</b> in CAD
-                        <span style="color:#f06060;">→ headwind</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            period_days = {"30D": 30, "90D": 90, "6M": 180, "1Y": 365}
+            cutoff = fx_hist_full.index[-1] - pd.Timedelta(
+                days=period_days[period_opt]
             )
+            fx_slice = fx_hist_full[fx_hist_full.index >= cutoff]
+
+            if len(fx_slice) >= 2:
+                p_closes = fx_slice["Close"]
+                p_hi = p_closes.max()
+                p_lo = p_closes.min()
+                p_first = float(p_closes.iloc[0])
+                p_last = float(p_closes.iloc[-1])
+                p_chg = ((p_last - p_first) / p_first) * 100
+                p_impact = usd_value * p_chg / 100
+                p_color = "#2dd4a8" if p_chg >= 0 else "#f06060"
+                p_arrow = "▲" if p_chg >= 0 else "▼"
+                p_direction = "strengthened" if p_chg > 0 else "weakened"
+                p_wind = "Tailwind" if p_chg > 0 else "Headwind" if p_chg < 0 else "Neutral"
+
+                # Portfolio impact card (shown first so it's always visible)
+                st.markdown(
+                    f"""
+                    <div class="fx-impact">
+                        <div class="fx-label">Portfolio FX Impact ({period_opt})</div>
+                        <div class="fx-value" style="color:{p_color};">
+                            {p_arrow} ${abs(p_impact)/1e6:.2f}M &nbsp;
+                            <span style="font-size:0.85rem;">{p_wind}</span>
+                        </div>
+                        <div class="fx-detail">
+                            USD {p_direction} {abs(p_chg):.2f}% vs CAD over {period_opt.lower()}.<br>
+                            Your USD exposure: <b style="color:#edf2f7;">${usd_value/1e6:.1f}M</b>
+                            ({usd_pct:.0f}% of portfolio).
+                        </div>
+                        <div class="fx-explainer">
+                            USD/CAD ▲ = USD worth
+                            <b style="color:#2dd4a8;">more</b> in CAD
+                            <span style="color:#2dd4a8;">→ tailwind</span>
+                            &nbsp;&nbsp;
+                            USD/CAD ▼ = USD worth
+                            <b style="color:#f06060;">less</b> in CAD
+                            <span style="color:#f06060;">→ headwind</span>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                # Chart
+                st.plotly_chart(
+                    make_fx_chart(fx_slice), use_container_width=True,
+                    key="fx_popover_chart",
+                )
+
+                # Stats row
+                st.markdown(
+                    f"""
+                    <div style="display:flex; justify-content:space-between;
+                                font-size:0.78rem; color:#8896ab; padding:0 0.2rem;">
+                        <span>High: <b style="color:#edf2f7;">{p_hi:.4f}</b></span>
+                        <span>Low: <b style="color:#edf2f7;">{p_lo:.4f}</b></span>
+                        <span>Change:
+                            <b style="color:{p_color};">
+                                {p_arrow} {abs(p_chg):.2f}%
+                            </b>
+                        </span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.caption("Not enough data for selected period")
         else:
             st.caption("FX history unavailable")
 
