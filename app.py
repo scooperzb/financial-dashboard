@@ -219,6 +219,17 @@ header[data-testid="stHeader"] .stActionButton {
     color: var(--accent-red);
     border-color: rgba(240, 96, 96, 0.18);
 }
+a.mover-chip {
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+a.mover-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+a.mover-chip.gainer:hover { border-color: rgba(45, 212, 168, 0.4); }
+a.mover-chip.loser:hover { border-color: rgba(240, 96, 96, 0.4); }
 
 /* ── Mover grid (clickable buttons) ── */
 .mover-grid {
@@ -1105,17 +1116,25 @@ def main():
     sorted_down = valid.nsmallest(3, "Day Change %")
 
     gainer_chips = "".join(
-        f'<span class="mover-chip gainer">{r["Ticker"]} ▲{r["Day Change %"]:.2f}%</span>'
+        f'<a href="?ticker={r["Ticker"]}#analysis-section" class="mover-chip gainer">'
+        f'{r["Ticker"]} ▲{r["Day Change %"]:.2f}%</a>'
         for _, r in sorted_up.iterrows() if r["Day Change %"] > 0
     )
     loser_chips = "".join(
-        f'<span class="mover-chip loser">{r["Ticker"]} ▼{abs(r["Day Change %"]):.2f}%</span>'
+        f'<a href="?ticker={r["Ticker"]}#analysis-section" class="mover-chip loser">'
+        f'{r["Ticker"]} ▼{abs(r["Day Change %"]):.2f}%</a>'
         for _, r in sorted_down.iterrows() if r["Day Change %"] < 0
     )
 
     # Initialize session state for analysis ticker
     if "analysis_ticker" not in st.session_state:
         st.session_state["analysis_ticker"] = None
+
+    # Pick up ticker from query param (hero mover chip click)
+    _qp_ticker = st.query_params.get("ticker")
+    if _qp_ticker:
+        st.session_state["analysis_ticker"] = _qp_ticker
+        st.query_params.clear()
 
     report_date = meta.get("report_date", "—")
     num_positions = meta.get("total_positions", len(holdings))
@@ -1191,26 +1210,6 @@ def main():
         """,
         unsafe_allow_html=True,
     )
-
-    # ── Clickable mover buttons (hero area) ──
-    hero_movers = []
-    for _, r in sorted_up.iterrows():
-        if r["Day Change %"] > 0:
-            hero_movers.append(r)
-    for _, r in sorted_down.iterrows():
-        if r["Day Change %"] < 0:
-            hero_movers.append(r)
-
-    if hero_movers:
-        mover_cols = st.columns(min(len(hero_movers), 6))
-        for idx, r in enumerate(hero_movers):
-            with mover_cols[idx % len(mover_cols)]:
-                chg = r["Day Change %"]
-                arrow = "▲" if chg >= 0 else "▼"
-                label = f"{r['Ticker']}  {arrow} {abs(chg):.2f}%"
-                if st.button(label, key=f"hero_mover_{r['Ticker']}",
-                             use_container_width=True):
-                    st.session_state["analysis_ticker"] = r["Ticker"]
 
     # ── FX Popover with chart + portfolio impact ──
     with st.popover(f"💱 USD/CAD {fx_rate:.4f}", use_container_width=False):
@@ -1618,8 +1617,11 @@ def main():
     # SECTION 3 — STOCK MOVEMENT ANALYSIS
     # ══════════════════════════════════════════════════════════════════════
 
-    st.markdown('<div class="section-header">Stock Movement Analysis</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div id="analysis-section" class="section-header">'
+        'Stock Movement Analysis</div>',
+        unsafe_allow_html=True,
+    )
     st.caption("Select a ticker to ask Claude why it moved · Cached 1 hour")
 
     # Build name map for display
@@ -1639,33 +1641,33 @@ def main():
     top_losers = valid.nsmallest(5, "Day Change %")
     top_losers = top_losers[top_losers["Day Change %"] < 0]
 
-    gain_col, loss_col = st.columns(2, gap="medium")
-
-    with gain_col:
+    # Gainers row
+    if len(top_gainers) > 0:
         st.markdown(
-            '<div class="analysis-section-label">🟢 Top Gainers</div>',
+            '<div class="analysis-section-label">🟢 Top Gainers — click to analyze</div>',
             unsafe_allow_html=True,
         )
-        g_cols = st.columns(min(len(top_gainers), 5)) if len(top_gainers) > 0 else []
+        g_cols = st.columns(len(top_gainers))
         for idx, (_, r) in enumerate(top_gainers.iterrows()):
             with g_cols[idx]:
                 if st.button(
-                    f"**{r['Ticker']}**\n▲ {r['Day Change %']:.2f}%",
+                    f"{r['Ticker']}\n▲ {r['Day Change %']:.2f}%",
                     key=f"gain_{r['Ticker']}",
                     use_container_width=True,
                 ):
                     st.session_state["analysis_ticker"] = r["Ticker"]
 
-    with loss_col:
+    # Losers row
+    if len(top_losers) > 0:
         st.markdown(
-            '<div class="analysis-section-label">🔴 Top Losers</div>',
+            '<div class="analysis-section-label">🔴 Top Losers — click to analyze</div>',
             unsafe_allow_html=True,
         )
-        l_cols = st.columns(min(len(top_losers), 5)) if len(top_losers) > 0 else []
+        l_cols = st.columns(len(top_losers))
         for idx, (_, r) in enumerate(top_losers.iterrows()):
             with l_cols[idx]:
                 if st.button(
-                    f"**{r['Ticker']}**\n▼ {abs(r['Day Change %']):.2f}%",
+                    f"{r['Ticker']}\n▼ {abs(r['Day Change %']):.2f}%",
                     key=f"loss_{r['Ticker']}",
                     use_container_width=True,
                 ):
