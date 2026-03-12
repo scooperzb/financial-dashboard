@@ -13,35 +13,23 @@
  LAYOUT:
    1. Holdings Table  → sorted by Value (CAD), live prices & day change
    2. Donut Charts    → Currency Exposure | Sector Allocation
-   3. Market Intel    → Top 10 stories from today's biggest movers
+   3. Stock Analysis  → Click any ticker, Claude explains the movement
 ================================================================================
 """
 
 import json
 import logging
-import re
+import os
 from pathlib import Path
 
-import nltk
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 import yfinance as yf
-from textblob import TextBlob
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CONFIG
 # ──────────────────────────────────────────────────────────────────────────────
-
-# TextBlob requires NLTK corpora — download on first run
-for corpus in ["punkt_tab", "punkt"]:
-    try:
-        nltk.data.find(f"tokenizers/{corpus}")
-    except LookupError:
-        try:
-            nltk.download(corpus, quiet=True)
-        except Exception:
-            pass
 
 HOLDINGS_FILE = Path(__file__).parent / "holdings.json"
 MODELS_DIR = Path(__file__).parent / "models"
@@ -283,56 +271,36 @@ div[data-testid="stDataFrame"] table {
     font-size: 0.85rem;
 }
 
-/* ── News cards ── */
-.news-card {
+/* ── Analysis cards ── */
+.analysis-card {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 1rem 1.25rem;
-    margin-bottom: 0.5rem;
-    transition: border-color 0.2s ease, transform 0.15s ease;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 0.75rem;
 }
-.news-card:hover {
-    border-color: var(--border-hover);
-    transform: translateY(-1px);
-}
-.news-card .news-top {
+.analysis-card .analysis-header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.4rem;
-    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
 }
-.news-card .ticker-badge {
+.analysis-card .ticker-badge {
     display: inline-block;
-    padding: 2px 10px;
+    padding: 3px 12px;
     border-radius: var(--radius-pill);
     font-weight: 700;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     letter-spacing: 0.03em;
 }
-.news-card .sentiment-badge {
-    font-weight: 600;
-    font-size: 0.78rem;
-}
-.news-card .publisher {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    margin-left: auto;
-}
-.news-card .headline {
+.analysis-card .analysis-body {
     font-size: 0.88rem;
-    font-weight: 500;
-    line-height: 1.5;
+    line-height: 1.7;
     color: var(--text-secondary);
 }
-.news-card .headline a {
-    color: var(--text-secondary);
-    text-decoration: none;
-    transition: color 0.15s ease;
-}
-.news-card .headline a:hover {
-    color: var(--accent-blue);
+.analysis-card .analysis-body strong {
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
 /* ── 52-Week Range Bar ── */
@@ -727,102 +695,37 @@ def compute_portfolio_metrics(table: pd.DataFrame, fundamentals: pd.DataFrame,
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# NEWS & RELEVANCE
+# STOCK MOVEMENT ANALYSIS (Claude API)
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _build_relevance_keywords(ticker: str, company_name: str) -> list[str]:
-    keywords = set()
-    base_ticker = ticker.split(".")[0].replace("-", ".").lower()
-    keywords.add(base_ticker)
-    keywords.add(ticker.lower())
-    skip = {"inc", "corp", "ltd", "the", "of", "class", "new", "com", "sub",
-            "common", "stock", "clb", "adr", "etf", "trust", "unit",
-            "partnership", "reit", "units", "exchangeable", "vtg", "vot"}
-    for word in company_name.lower().replace(",", "").replace(".", "").split():
-        if len(word) >= 3 and word not in skip:
-            keywords.add(word)
-    aliases = {
-        "alphabet": ["google"], "meta": ["facebook", "instagram"],
-        "brookfield": ["brookfield"], "spdr": ["gold", "gld"],
-        "ishares": ["bitcoin", "ethereum"],
-    }
-    for key, extras in aliases.items():
-        if key in keywords:
-            keywords.update(extras)
-    return list(keywords)
-
-
-def _is_relevant(title: str, summary: str, keywords: list[str]) -> bool:
-    text = (title + " " + summary).lower()
-    return any(re.search(r'\b' + re.escape(kw) + r'\b', text) for kw in keywords)
-
-
-@st.cache_data(ttl=3600)
-def fetch_news_for_ticker(ticker: str, company_name: str) -> list[dict]:
+@st.cache_data(ttl=3600, show_spinner=False)
+def query_stock_movement(ticker: str, company_name: str,
+                         day_change: float, price: float) -> str:
+    """Ask Claude for the latest reason behind a stock's price movement."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return "ANTHROPIC_API_KEY not configured — add it to your environment variables."
     try:
-        t = yf.Ticker(ticker)
-        raw_news = t.news or []
-    except Exception:
-        return []
-    keywords = _build_relevance_keywords(ticker, company_name)
-    items = []
-    for article in raw_news:
-        # Handle both yfinance <1.0 (flat keys) and >=1.0 (nested "content")
-        content = article.get("content", article)
-        title = content.get("title", article.get("title", ""))
-        summary = content.get("summary", article.get("summary", ""))
-        if not _is_relevant(title, summary, keywords):
-            continue
-        click_through = content.get("clickThroughUrl") or {}
-        canonical = content.get("canonicalUrl") or {}
-        link = (click_through.get("url")
-                or canonical.get("url")
-                or article.get("link", ""))
-        provider = content.get("provider") or {}
-        publisher = provider.get("displayName", article.get("publisher", "Unknown"))
-        polarity = TextBlob(title).sentiment.polarity
-        if polarity > 0.05:
-            sentiment = "Bullish"
-        elif polarity < -0.05:
-            sentiment = "Bearish"
-        else:
-            sentiment = "Neutral"
-        items.append({"title": title, "link": link, "publisher": publisher,
-                       "sentiment": sentiment, "polarity": polarity,
-                       "ticker": ticker, "company": company_name})
-    return items
-
-
-def get_top_movers_news(table: pd.DataFrame, holdings: pd.DataFrame,
-                        top_n_movers: int = 15, top_n_stories: int = 10) -> list[dict]:
-    name_map = holdings.set_index("ticker")["name"].to_dict()
-    movers = (
-        table.dropna(subset=["Day Change %"])
-        .assign(**{"abs_chg": lambda df: df["Day Change %"].abs()})
-        .sort_values("abs_chg", ascending=False)
-        .head(top_n_movers)
-    )
-    all_news, seen_titles, ticker_counts = [], set(), {}
-    for rank, (_, row) in enumerate(movers.iterrows()):
-        ticker = row["Ticker"]
-        company = name_map.get(ticker, ticker)
-        day_chg = row["Day Change %"]
-        max_for_ticker = 4 if rank == 0 else 2
-        ticker_counts.setdefault(ticker, 0)
-        stories = fetch_news_for_ticker(ticker, company)
-        for story in stories:
-            if ticker_counts[ticker] >= max_for_ticker:
-                break
-            title_key = story["title"].lower().strip()
-            if title_key in seen_titles:
-                continue
-            seen_titles.add(title_key)
-            story["day_change"] = day_chg
-            story["abs_change"] = abs(day_chg)
-            all_news.append(story)
-            ticker_counts[ticker] += 1
-    all_news.sort(key=lambda x: x["abs_change"], reverse=True)
-    return all_news[:top_n_stories]
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        direction = "up" if day_change >= 0 else "down"
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=300,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"What is the latest reason for the movement in {company_name} "
+                    f"({ticker}) stock price? It is currently {direction} "
+                    f"{abs(day_change):.2f}% today at ${price:.2f}. "
+                    f"Give a concise 2-3 sentence answer focusing on the most "
+                    f"likely catalyst. If there's no clear recent catalyst, say so."
+                ),
+            }],
+        )
+        return message.content[0].text
+    except Exception as e:
+        return f"Error querying Claude: {e}"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -944,13 +847,6 @@ SECTOR_COLORS = {
     "Commodities": "#fcd34d", "Digital Assets": "#f59e0b", "ETF - Equity": "#94a3b8",
     "Cash": "#64748b",
 }
-
-SENTIMENT_STYLE = {
-    "Bullish":  ("▲", "#2dd4a8"),
-    "Bearish":  ("▼", "#f06060"),
-    "Neutral":  ("—", "#576678"),
-}
-
 
 def make_donut(labels, values, title, colors=None, center_text=None,
                hover_format=None):
@@ -1092,8 +988,7 @@ def main():
         st.caption(
             f"Report: {meta.get('report_date', '—')}  \n"
             f"Positions: {meta.get('total_positions', len(holdings))}  \n"
-            f"Source: Yahoo Finance  \n"
-            f"News: Hourly refresh"
+            f"Source: Yahoo Finance"
         )
 
     # ── Build the master table ──
@@ -1621,46 +1516,69 @@ def main():
     st.markdown("---")
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 3 — MARKET INTEL
+    # SECTION 3 — STOCK MOVEMENT ANALYSIS
     # ══════════════════════════════════════════════════════════════════════
 
-    st.markdown('<div class="section-header">Latest Market Intel</div>',
+    st.markdown('<div class="section-header">Stock Movement Analysis</div>',
                 unsafe_allow_html=True)
-    st.caption("Top stories from today's biggest movers · Refreshes hourly")
+    st.caption("Click a ticker to ask Claude why it moved · Cached 1 hour")
 
-    with st.spinner("Scanning news for biggest movers..."):
-        top_stories = get_top_movers_news(table, holdings)
+    # Build name map for display
+    name_map = holdings.set_index("ticker")["name"].to_dict()
 
-    if not top_stories:
-        st.info("No relevant news found for today's movers.")
-    else:
-        for item in top_stories:
-            arrow, sent_color = SENTIMENT_STYLE.get(item["sentiment"], ("—", "#64748b"))
+    # Sort by absolute day change — biggest movers first
+    movers = (
+        table.dropna(subset=["Day Change %"])
+        .assign(abs_chg=lambda df: df["Day Change %"].abs())
+        .sort_values("abs_chg", ascending=False)
+    )
 
-            chg = item["day_change"]
-            chg_color = "#2dd4a8" if chg >= 0 else "#f06060"
-            chg_arrow = "▲" if chg >= 0 else "▼"
+    # Ticker selector — show as buttons in columns
+    ticker_list = movers["Ticker"].tolist()
+    selected_ticker = st.selectbox(
+        "Select a ticker to analyze",
+        options=ticker_list,
+        format_func=lambda t: (
+            f"{t}  {'▲' if movers.set_index('Ticker').loc[t, 'Day Change %'] >= 0 else '▼'}"
+            f"  {abs(movers.set_index('Ticker').loc[t, 'Day Change %']):.2f}%"
+            f"  —  {name_map.get(t, t)}"
+        ),
+        key="analysis_ticker",
+        label_visibility="collapsed",
+    )
 
-            st.markdown(
-                f"""
-                <div class="news-card">
-                    <div class="news-top">
-                        <span class="ticker-badge"
-                              style="background:{chg_color}18; color:{chg_color}; border:1px solid {chg_color}44;">
-                            {item["ticker"]} {chg_arrow} {abs(chg):.2f}%
-                        </span>
-                        <span class="sentiment-badge" style="color:{sent_color};">
-                            {arrow} {item["sentiment"]}
-                        </span>
-                        <span class="publisher">{item["publisher"]}</span>
-                    </div>
-                    <div class="headline">
-                        <a href="{item["link"]}" target="_blank">{item["title"]}</a>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+    if selected_ticker:
+        row = movers.set_index("Ticker").loc[selected_ticker]
+        day_chg = row["Day Change %"]
+        price = row.get("Price", 0)
+        company = name_map.get(selected_ticker, selected_ticker)
+        chg_color = "#2dd4a8" if day_chg >= 0 else "#f06060"
+        chg_arrow = "▲" if day_chg >= 0 else "▼"
+
+        with st.spinner(f"Asking Claude about {selected_ticker}..."):
+            analysis = query_stock_movement(
+                selected_ticker, company, day_chg, price
             )
+
+        st.markdown(
+            f"""
+            <div class="analysis-card">
+                <div class="analysis-header">
+                    <span class="ticker-badge"
+                          style="background:{chg_color}18; color:{chg_color}; border:1px solid {chg_color}44;">
+                        {selected_ticker} {chg_arrow} {abs(day_chg):.2f}%
+                    </span>
+                    <span style="color:var(--text-muted); font-size:0.8rem;">
+                        {company} · ${price:,.2f}
+                    </span>
+                </div>
+                <div class="analysis-body">
+                    {analysis}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     # ── Footer ──
     st.markdown(
@@ -1668,7 +1586,7 @@ def main():
         f'Last refreshed: {refresh_time} &middot; '
         f'Report: {meta.get("report_date", "—")} &middot; '
         f'Live prices via Yahoo Finance &middot; '
-        f'Sentiment via TextBlob'
+        f'Analysis via Claude'
         f'</div>',
         unsafe_allow_html=True,
     )
