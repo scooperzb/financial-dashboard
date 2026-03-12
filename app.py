@@ -303,6 +303,13 @@ div[data-testid="stDataFrame"] table {
     font-weight: 600;
 }
 
+/* ── Ticker Pills (mobile-friendly) ── */
+div[data-testid="stPills"] button {
+    font-family: 'SF Mono', 'Fira Code', monospace !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.02em;
+}
+
 /* ── 52-Week Range Bar ── */
 .range-bar-container {
     margin: 0.5rem 0;
@@ -701,7 +708,7 @@ def compute_portfolio_metrics(table: pd.DataFrame, fundamentals: pd.DataFrame,
 @st.cache_data(ttl=3600, show_spinner=False)
 def query_stock_movement(ticker: str, company_name: str,
                          day_change: float, price: float) -> str:
-    """Ask Claude for the latest reason behind a stock's price movement."""
+    """Ask Claude (with web search) for the latest reason behind a stock move."""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return "ANTHROPIC_API_KEY not configured — add it to your environment variables."
@@ -711,19 +718,29 @@ def query_stock_movement(ticker: str, company_name: str,
         direction = "up" if day_change >= 0 else "down"
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=300,
+            max_tokens=500,
+            tools=[{
+                "type": "web_search_20250305",
+                "name": "web_search",
+                "max_uses": 3,
+            }],
             messages=[{
                 "role": "user",
                 "content": (
                     f"What is the latest reason for the movement in {company_name} "
                     f"({ticker}) stock price? It is currently {direction} "
                     f"{abs(day_change):.2f}% today at ${price:.2f}. "
-                    f"Give a concise 2-3 sentence answer focusing on the most "
-                    f"likely catalyst. If there's no clear recent catalyst, say so."
+                    f"Search the web for the most recent news and give a concise "
+                    f"2-3 sentence answer focusing on the most likely catalyst."
                 ),
             }],
         )
-        return message.content[0].text
+        # Extract text blocks from the response (web search returns mixed content)
+        parts = []
+        for block in message.content:
+            if hasattr(block, "text"):
+                parts.append(block.text)
+        return " ".join(parts).strip() if parts else "No analysis available."
     except Exception as e:
         return f"Error querying Claude: {e}"
 
@@ -1533,19 +1550,23 @@ def main():
         .sort_values("abs_chg", ascending=False)
     )
 
-    # Ticker selector — show as buttons in columns
+    # Ticker selector — tap-friendly pills (works well on mobile)
     ticker_list = movers["Ticker"].tolist()
-    selected_ticker = st.selectbox(
+    movers_idx = movers.set_index("Ticker")
+    pill_labels = [
+        f"{t}  {'▲' if movers_idx.loc[t, 'Day Change %'] >= 0 else '▼'}"
+        f" {abs(movers_idx.loc[t, 'Day Change %']):.2f}%"
+        for t in ticker_list
+    ]
+    label_to_ticker = dict(zip(pill_labels, ticker_list))
+
+    selected_label = st.pills(
         "Select a ticker to analyze",
-        options=ticker_list,
-        format_func=lambda t: (
-            f"{t}  {'▲' if movers.set_index('Ticker').loc[t, 'Day Change %'] >= 0 else '▼'}"
-            f"  {abs(movers.set_index('Ticker').loc[t, 'Day Change %']):.2f}%"
-            f"  —  {name_map.get(t, t)}"
-        ),
+        options=pill_labels,
         key="analysis_ticker",
         label_visibility="collapsed",
     )
+    selected_ticker = label_to_ticker.get(selected_label)
 
     if selected_ticker:
         row = movers.set_index("Ticker").loc[selected_ticker]
