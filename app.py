@@ -220,6 +220,51 @@ header[data-testid="stHeader"] .stActionButton {
     border-color: rgba(240, 96, 96, 0.18);
 }
 
+/* ── Mover grid (clickable buttons) ── */
+.mover-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+.mover-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.65rem 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+.mover-btn:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+.mover-btn .mover-ticker {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.mover-btn .mover-pct {
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-top: 0.15rem;
+}
+.mover-btn .mover-name {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mover-btn.gainer { border-left: 3px solid var(--accent-green); }
+.mover-btn.gainer .mover-pct { color: var(--accent-green); }
+.mover-btn.loser { border-left: 3px solid var(--accent-red); }
+.mover-btn.loser .mover-pct { color: var(--accent-red); }
+
 /* ── Metric cards ── */
 .metric-row {
     display: flex;
@@ -303,11 +348,24 @@ div[data-testid="stDataFrame"] table {
     font-weight: 600;
 }
 
-/* ── Ticker Pills (mobile-friendly) ── */
-div[data-testid="stPills"] button {
-    font-family: 'SF Mono', 'Fira Code', monospace !important;
-    font-size: 0.78rem !important;
-    letter-spacing: 0.02em;
+/* ── Analysis search select ── */
+.analysis-search {
+    margin-bottom: 1rem;
+}
+.analysis-section-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+}
+
+/* ── Hero mover buttons ── */
+div[data-testid="stHorizontalBlock"] .stButton > button {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.5rem;
+    white-space: nowrap;
 }
 
 /* ── 52-Week Range Bar ── */
@@ -718,20 +776,20 @@ def query_stock_movement(ticker: str, company_name: str,
         direction = "up" if day_change >= 0 else "down"
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=500,
+            max_tokens=1024,
             tools=[{
                 "type": "web_search_20250305",
                 "name": "web_search",
-                "max_uses": 3,
+                "max_uses": 5,
             }],
             messages=[{
                 "role": "user",
                 "content": (
-                    f"What is the latest reason for the movement in {company_name} "
-                    f"({ticker}) stock price? It is currently {direction} "
-                    f"{abs(day_change):.2f}% today at ${price:.2f}. "
-                    f"Search the web for the most recent news and give a concise "
-                    f"2-3 sentence answer focusing on the most likely catalyst."
+                    f"Search the web for the latest news about {company_name} ({ticker}) stock. "
+                    f"The stock is {direction} {abs(day_change):.2f}% today, "
+                    f"currently trading at ${price:.2f}. "
+                    f"What is the most likely reason or catalyst for this move? "
+                    f"Give a concise 2-3 sentence answer based on what you find."
                 ),
             }],
         )
@@ -1042,7 +1100,7 @@ def main():
     market_dot = "open" if market_is_open else "closed"
     market_label = "Market Open" if market_is_open else "Market Closed"
 
-    # Top 3 gainers & losers for mover chips
+    # Top 3 gainers & losers for mover chips (also used for clickable buttons later)
     sorted_up = valid.nlargest(3, "Day Change %")
     sorted_down = valid.nsmallest(3, "Day Change %")
 
@@ -1054,6 +1112,10 @@ def main():
         f'<span class="mover-chip loser">{r["Ticker"]} ▼{abs(r["Day Change %"]):.2f}%</span>'
         for _, r in sorted_down.iterrows() if r["Day Change %"] < 0
     )
+
+    # Initialize session state for analysis ticker
+    if "analysis_ticker" not in st.session_state:
+        st.session_state["analysis_ticker"] = None
 
     report_date = meta.get("report_date", "—")
     num_positions = meta.get("total_positions", len(holdings))
@@ -1129,6 +1191,26 @@ def main():
         """,
         unsafe_allow_html=True,
     )
+
+    # ── Clickable mover buttons (hero area) ──
+    hero_movers = []
+    for _, r in sorted_up.iterrows():
+        if r["Day Change %"] > 0:
+            hero_movers.append(r)
+    for _, r in sorted_down.iterrows():
+        if r["Day Change %"] < 0:
+            hero_movers.append(r)
+
+    if hero_movers:
+        mover_cols = st.columns(min(len(hero_movers), 6))
+        for idx, r in enumerate(hero_movers):
+            with mover_cols[idx % len(mover_cols)]:
+                chg = r["Day Change %"]
+                arrow = "▲" if chg >= 0 else "▼"
+                label = f"{r['Ticker']}  {arrow} {abs(chg):.2f}%"
+                if st.button(label, key=f"hero_mover_{r['Ticker']}",
+                             use_container_width=True):
+                    st.session_state["analysis_ticker"] = r["Ticker"]
 
     # ── FX Popover with chart + portfolio impact ──
     with st.popover(f"💱 USD/CAD {fx_rate:.4f}", use_container_width=False):
@@ -1538,7 +1620,7 @@ def main():
 
     st.markdown('<div class="section-header">Stock Movement Analysis</div>',
                 unsafe_allow_html=True)
-    st.caption("Click a ticker to ask Claude why it moved · Cached 1 hour")
+    st.caption("Select a ticker to ask Claude why it moved · Cached 1 hour")
 
     # Build name map for display
     name_map = holdings.set_index("ticker")["name"].to_dict()
@@ -1549,27 +1631,74 @@ def main():
         .assign(abs_chg=lambda df: df["Day Change %"].abs())
         .sort_values("abs_chg", ascending=False)
     )
-
-    # Ticker selector — tap-friendly pills (works well on mobile)
-    ticker_list = movers["Ticker"].tolist()
     movers_idx = movers.set_index("Ticker")
-    pill_labels = [
-        f"{t}  {'▲' if movers_idx.loc[t, 'Day Change %'] >= 0 else '▼'}"
-        f" {abs(movers_idx.loc[t, 'Day Change %']):.2f}%"
-        for t in ticker_list
-    ]
-    label_to_ticker = dict(zip(pill_labels, ticker_list))
 
-    selected_label = st.pills(
-        "Select a ticker to analyze",
-        options=pill_labels,
-        key="analysis_ticker",
-        label_visibility="collapsed",
-    )
-    selected_ticker = label_to_ticker.get(selected_label)
+    # ── Top movers grid (5 gainers + 5 losers) ──
+    top_gainers = valid.nlargest(5, "Day Change %")
+    top_gainers = top_gainers[top_gainers["Day Change %"] > 0]
+    top_losers = valid.nsmallest(5, "Day Change %")
+    top_losers = top_losers[top_losers["Day Change %"] < 0]
 
-    if selected_ticker:
-        row = movers.set_index("Ticker").loc[selected_ticker]
+    gain_col, loss_col = st.columns(2, gap="medium")
+
+    with gain_col:
+        st.markdown(
+            '<div class="analysis-section-label">🟢 Top Gainers</div>',
+            unsafe_allow_html=True,
+        )
+        g_cols = st.columns(min(len(top_gainers), 5)) if len(top_gainers) > 0 else []
+        for idx, (_, r) in enumerate(top_gainers.iterrows()):
+            with g_cols[idx]:
+                if st.button(
+                    f"**{r['Ticker']}**\n▲ {r['Day Change %']:.2f}%",
+                    key=f"gain_{r['Ticker']}",
+                    use_container_width=True,
+                ):
+                    st.session_state["analysis_ticker"] = r["Ticker"]
+
+    with loss_col:
+        st.markdown(
+            '<div class="analysis-section-label">🔴 Top Losers</div>',
+            unsafe_allow_html=True,
+        )
+        l_cols = st.columns(min(len(top_losers), 5)) if len(top_losers) > 0 else []
+        for idx, (_, r) in enumerate(top_losers.iterrows()):
+            with l_cols[idx]:
+                if st.button(
+                    f"**{r['Ticker']}**\n▼ {abs(r['Day Change %']):.2f}%",
+                    key=f"loss_{r['Ticker']}",
+                    use_container_width=True,
+                ):
+                    st.session_state["analysis_ticker"] = r["Ticker"]
+
+    # ── Search any ticker ──
+    all_ticker_options = [""] + movers["Ticker"].tolist()
+    ticker_display = {
+        "": "Search all tickers...",
+    }
+    for t in movers["Ticker"].tolist():
+        chg = movers_idx.loc[t, "Day Change %"]
+        arrow = "▲" if chg >= 0 else "▼"
+        short_name = name_map.get(t, t)[:30]
+        ticker_display[t] = f"{t}  {arrow} {abs(chg):.2f}%  —  {short_name}"
+
+    search_col, _ = st.columns([1, 2])
+    with search_col:
+        searched = st.selectbox(
+            "Or search any holding",
+            options=all_ticker_options,
+            format_func=lambda x: ticker_display.get(x, x),
+            key="ticker_search",
+            label_visibility="collapsed",
+        )
+        if searched:
+            st.session_state["analysis_ticker"] = searched
+
+    # ── Display analysis for selected ticker ──
+    selected_ticker = st.session_state.get("analysis_ticker")
+
+    if selected_ticker and selected_ticker in movers_idx.index:
+        row = movers_idx.loc[selected_ticker]
         day_chg = row["Day Change %"]
         price = row.get("Price", 0)
         company = name_map.get(selected_ticker, selected_ticker)
