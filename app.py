@@ -774,9 +774,26 @@ def compute_portfolio_metrics(table: pd.DataFrame, fundamentals: pd.DataFrame,
 # STOCK MOVEMENT ANALYSIS (Claude API)
 # ──────────────────────────────────────────────────────────────────────────────
 
+@st.cache_data(ttl=600, show_spinner=False)
+def _get_sp500_change() -> tuple[str, float]:
+    """Fetch today's S&P 500 change via ^GSPC."""
+    try:
+        spy = yf.Ticker("^GSPC")
+        hist = spy.history(period="5d")
+        if len(hist) >= 2:
+            last = float(hist["Close"].iloc[-1])
+            prev = float(hist["Close"].iloc[-2])
+            chg = ((last / prev) - 1) * 100
+            return ("up" if chg >= 0 else "down", abs(chg))
+    except Exception:
+        pass
+    return ("flat", 0.0)
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def query_stock_movement(ticker: str, company_name: str,
-                         day_change: float, price: float) -> str:
+                         day_change: float, price: float,
+                         sector: str = "—") -> str:
     """Ask Claude (with web search) for the latest reason behind a stock move."""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -785,6 +802,32 @@ def query_stock_movement(ticker: str, company_name: str,
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
         direction = "up" if day_change >= 0 else "down"
+        sp500_direction, sp500_change = _get_sp500_change()
+        prompt = (
+            f"You are a financial news analyst. Your job is to identify the most "
+            f"likely catalyst for a stock's move today.\n\n"
+            f"**Stock context:**\n"
+            f"- Company: {company_name} ({ticker})\n"
+            f"- Sector: {sector}\n"
+            f"- Today's move: {direction} {abs(day_change):.2f}% (${price:.2f})\n"
+            f"- Market context: S&P 500 is {sp500_direction} {sp500_change:.2f}% today\n\n"
+            f"**Instructions:**\n"
+            f"1. Search for news about {ticker} from today and the last 24 hours. "
+            f"Prioritize earnings releases, guidance changes, analyst actions, "
+            f"regulatory developments, management changes, and M&A activity.\n"
+            f"2. If no company-specific catalyst is found, search for sector or macro "
+            f"developments that would explain the move (e.g., rate decisions, sector "
+            f"rotation, commodity price shifts).\n"
+            f"3. Attribute the move to the most specific catalyst you can identify. "
+            f"Do not default to \"broad market weakness/strength\" unless the stock's "
+            f"move is closely tracking the index and no idiosyncratic driver exists.\n\n"
+            f"**Response format:**\n"
+            f"- **Catalyst:** [One-line summary of the primary driver]\n"
+            f"- **Detail:** [2-4 sentences with specifics — dates, figures, analyst "
+            f"names, or policy details where available]\n"
+            f"- **Confidence:** [High / Medium / Low] based on how directly the "
+            f"catalyst explains the magnitude and direction of the move"
+        )
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1024,
@@ -793,16 +836,7 @@ def query_stock_movement(ticker: str, company_name: str,
                 "name": "web_search",
                 "max_uses": 5,
             }],
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Search the web for the latest news about {company_name} ({ticker}) stock. "
-                    f"The stock is {direction} {abs(day_change):.2f}% today, "
-                    f"currently trading at ${price:.2f}. "
-                    f"What is the most likely reason or catalyst for this move? "
-                    f"Give a concise 2-3 sentence answer based on what you find."
-                ),
-            }],
+            messages=[{"role": "user", "content": prompt}],
         )
         # Extract text blocks from the response (web search returns mixed content)
         parts = []
@@ -1614,123 +1648,130 @@ def main():
     st.markdown("---")
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 3 — STOCK MOVEMENT ANALYSIS
+    # SECTION 3 — STOCK MOVEMENT ANALYSIS  (wrapped in @st.fragment so
+    # button clicks only rerun this section, keeping scroll position)
     # ══════════════════════════════════════════════════════════════════════
 
-    st.markdown(
-        '<div id="analysis-section" class="section-header">'
-        'Stock Movement Analysis</div>',
-        unsafe_allow_html=True,
-    )
-    st.caption("Select a ticker to ask Claude why it moved · Cached 1 hour")
-
-    # Build name map for display
+    # Pre-compute data the fragment needs (avoids referencing outer locals
+    # that change on full reruns)
     name_map = holdings.set_index("ticker")["name"].to_dict()
-
-    # Sort by absolute day change — biggest movers first
     movers = (
         table.dropna(subset=["Day Change %"])
         .assign(abs_chg=lambda df: df["Day Change %"].abs())
         .sort_values("abs_chg", ascending=False)
     )
     movers_idx = movers.set_index("Ticker")
-
-    # ── Top movers grid (5 gainers + 5 losers) ──
     top_gainers = valid.nlargest(5, "Day Change %")
     top_gainers = top_gainers[top_gainers["Day Change %"] > 0]
     top_losers = valid.nsmallest(5, "Day Change %")
     top_losers = top_losers[top_losers["Day Change %"] < 0]
 
-    # Gainers row
-    if len(top_gainers) > 0:
+    @st.fragment
+    def _analysis_fragment():
         st.markdown(
-            '<div class="analysis-section-label">🟢 Top Gainers — click to analyze</div>',
+            '<div id="analysis-section" class="section-header">'
+            'Stock Movement Analysis</div>',
             unsafe_allow_html=True,
         )
-        g_cols = st.columns(len(top_gainers))
-        for idx, (_, r) in enumerate(top_gainers.iterrows()):
-            with g_cols[idx]:
-                if st.button(
-                    f"{r['Ticker']}\n▲ {r['Day Change %']:.2f}%",
-                    key=f"gain_{r['Ticker']}",
-                    use_container_width=True,
-                ):
-                    st.session_state["analysis_ticker"] = r["Ticker"]
+        st.caption("Select a ticker to ask Claude why it moved · Cached 1 hour")
 
-    # Losers row
-    if len(top_losers) > 0:
-        st.markdown(
-            '<div class="analysis-section-label">🔴 Top Losers — click to analyze</div>',
-            unsafe_allow_html=True,
-        )
-        l_cols = st.columns(len(top_losers))
-        for idx, (_, r) in enumerate(top_losers.iterrows()):
-            with l_cols[idx]:
-                if st.button(
-                    f"{r['Ticker']}\n▼ {abs(r['Day Change %']):.2f}%",
-                    key=f"loss_{r['Ticker']}",
-                    use_container_width=True,
-                ):
-                    st.session_state["analysis_ticker"] = r["Ticker"]
+        # ── Top movers grid (5 gainers + 5 losers) ──
+        if len(top_gainers) > 0:
+            st.markdown(
+                '<div class="analysis-section-label">🟢 Top Gainers — click to analyze</div>',
+                unsafe_allow_html=True,
+            )
+            g_cols = st.columns(len(top_gainers))
+            for idx, (_, r) in enumerate(top_gainers.iterrows()):
+                with g_cols[idx]:
+                    if st.button(
+                        f"{r['Ticker']}\n:green[▲ {r['Day Change %']:.2f}%]",
+                        key=f"gain_{r['Ticker']}",
+                        use_container_width=True,
+                    ):
+                        st.session_state["analysis_ticker"] = r["Ticker"]
 
-    # ── Search any ticker ──
-    all_ticker_options = [""] + movers["Ticker"].tolist()
-    ticker_display = {
-        "": "Search all tickers...",
-    }
-    for t in movers["Ticker"].tolist():
-        chg = movers_idx.loc[t, "Day Change %"]
-        arrow = "▲" if chg >= 0 else "▼"
-        short_name = name_map.get(t, t)[:30]
-        ticker_display[t] = f"{t}  {arrow} {abs(chg):.2f}%  —  {short_name}"
+        if len(top_losers) > 0:
+            st.markdown(
+                '<div class="analysis-section-label">🔴 Top Losers — click to analyze</div>',
+                unsafe_allow_html=True,
+            )
+            l_cols = st.columns(len(top_losers))
+            for idx, (_, r) in enumerate(top_losers.iterrows()):
+                with l_cols[idx]:
+                    if st.button(
+                        f"{r['Ticker']}\n:red[▼ {abs(r['Day Change %']):.2f}%]",
+                        key=f"loss_{r['Ticker']}",
+                        use_container_width=True,
+                    ):
+                        st.session_state["analysis_ticker"] = r["Ticker"]
 
-    search_col, _ = st.columns([1, 2])
-    with search_col:
-        searched = st.selectbox(
-            "Or search any holding",
-            options=all_ticker_options,
-            format_func=lambda x: ticker_display.get(x, x),
-            key="ticker_search",
-            label_visibility="collapsed",
-        )
-        if searched:
-            st.session_state["analysis_ticker"] = searched
+        # ── Search any ticker ──
+        all_ticker_options = [""] + movers["Ticker"].tolist()
+        ticker_display = {"": "Search all tickers..."}
+        for t in movers["Ticker"].tolist():
+            chg = movers_idx.loc[t, "Day Change %"]
+            arrow = "▲" if chg >= 0 else "▼"
+            short_name = name_map.get(t, t)[:30]
+            ticker_display[t] = f"{t}  {arrow} {abs(chg):.2f}%  —  {short_name}"
 
-    # ── Display analysis for selected ticker ──
-    selected_ticker = st.session_state.get("analysis_ticker")
+        search_col, _ = st.columns([1, 2])
+        with search_col:
+            searched = st.selectbox(
+                "Or search any holding",
+                options=all_ticker_options,
+                format_func=lambda x: ticker_display.get(x, x),
+                key="ticker_search",
+                label_visibility="collapsed",
+            )
+            if searched:
+                st.session_state["analysis_ticker"] = searched
 
-    if selected_ticker and selected_ticker in movers_idx.index:
-        row = movers_idx.loc[selected_ticker]
-        day_chg = row["Day Change %"]
-        price = row.get("Price", 0)
-        company = name_map.get(selected_ticker, selected_ticker)
-        chg_color = "#2dd4a8" if day_chg >= 0 else "#f06060"
-        chg_arrow = "▲" if day_chg >= 0 else "▼"
+        # ── Display analysis for selected ticker ──
+        selected_ticker = st.session_state.get("analysis_ticker")
 
-        with st.spinner(f"Asking Claude about {selected_ticker}..."):
-            analysis = query_stock_movement(
-                selected_ticker, company, day_chg, price
+        if selected_ticker and selected_ticker in movers_idx.index:
+            row = movers_idx.loc[selected_ticker]
+            day_chg = row["Day Change %"]
+            price = row.get("Price", 0)
+            sector = row.get("Sector", "—")
+            company = name_map.get(selected_ticker, selected_ticker)
+            chg_color = "#2dd4a8" if day_chg >= 0 else "#f06060"
+            chg_arrow = "▲" if day_chg >= 0 else "▼"
+
+            with st.spinner(f"Asking Claude about {selected_ticker}..."):
+                analysis = query_stock_movement(
+                    selected_ticker, company, day_chg, price, sector
+                )
+
+            st.markdown(
+                f"""
+                <div class="analysis-card">
+                    <div class="analysis-header">
+                        <span class="ticker-badge"
+                              style="background:{chg_color}18; color:{chg_color}; border:1px solid {chg_color}44;">
+                            {selected_ticker} {chg_arrow} {abs(day_chg):.2f}%
+                        </span>
+                        <span style="color:var(--text-muted); font-size:0.8rem;">
+                            {company} · ${price:,.2f}
+                        </span>
+                    </div>
+                    <div class="analysis-body">
+                        {analysis}
+                    </div>
+                </div>
+                <script>
+                    // Scroll the analysis card into view after render
+                    (function() {{
+                        var el = document.querySelector('.analysis-card');
+                        if (el) el.scrollIntoView({{behavior: 'smooth', block: 'center'}});
+                    }})();
+                </script>
+                """,
+                unsafe_allow_html=True,
             )
 
-        st.markdown(
-            f"""
-            <div class="analysis-card">
-                <div class="analysis-header">
-                    <span class="ticker-badge"
-                          style="background:{chg_color}18; color:{chg_color}; border:1px solid {chg_color}44;">
-                        {selected_ticker} {chg_arrow} {abs(day_chg):.2f}%
-                    </span>
-                    <span style="color:var(--text-muted); font-size:0.8rem;">
-                        {company} · ${price:,.2f}
-                    </span>
-                </div>
-                <div class="analysis-body">
-                    {analysis}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    _analysis_fragment()
 
     # ── Footer ──
     st.markdown(
