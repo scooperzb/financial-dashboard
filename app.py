@@ -219,18 +219,6 @@ header[data-testid="stHeader"] .stActionButton {
     color: var(--accent-red);
     border-color: rgba(240, 96, 96, 0.18);
 }
-a.mover-chip {
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-a.mover-chip:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-a.mover-chip.gainer:hover { border-color: rgba(45, 212, 168, 0.4); }
-a.mover-chip.loser:hover { border-color: rgba(240, 96, 96, 0.4); }
-
 /* ── Mover grid (clickable buttons) ── */
 .mover-grid {
     display: grid;
@@ -821,12 +809,14 @@ def query_stock_movement(ticker: str, company_name: str,
             f"3. Attribute the move to the most specific catalyst you can identify. "
             f"Do not default to \"broad market weakness/strength\" unless the stock's "
             f"move is closely tracking the index and no idiosyncratic driver exists.\n\n"
-            f"**Response format:**\n"
+            f"**Response format (output ONLY this, no preamble or thinking):**\n"
             f"- **Catalyst:** [One-line summary of the primary driver]\n"
             f"- **Detail:** [2-4 sentences with specifics — dates, figures, analyst "
             f"names, or policy details where available]\n"
             f"- **Confidence:** [High / Medium / Low] based on how directly the "
-            f"catalyst explains the magnitude and direction of the move"
+            f"catalyst explains the magnitude and direction of the move\n\n"
+            f"IMPORTANT: Start your response directly with \"- **Catalyst:**\". "
+            f"Do not include any introductory text, thinking, or commentary before the structured response."
         )
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
@@ -1150,25 +1140,19 @@ def main():
     sorted_down = valid.nsmallest(3, "Day Change %")
 
     gainer_chips = "".join(
-        f'<a href="?ticker={r["Ticker"]}#analysis-section" class="mover-chip gainer">'
-        f'{r["Ticker"]} ▲{r["Day Change %"]:.2f}%</a>'
+        f'<span class="mover-chip gainer">'
+        f'{r["Ticker"]} ▲{r["Day Change %"]:.2f}%</span>'
         for _, r in sorted_up.iterrows() if r["Day Change %"] > 0
     )
     loser_chips = "".join(
-        f'<a href="?ticker={r["Ticker"]}#analysis-section" class="mover-chip loser">'
-        f'{r["Ticker"]} ▼{abs(r["Day Change %"]):.2f}%</a>'
+        f'<span class="mover-chip loser">'
+        f'{r["Ticker"]} ▼{abs(r["Day Change %"]):.2f}%</span>'
         for _, r in sorted_down.iterrows() if r["Day Change %"] < 0
     )
 
     # Initialize session state for analysis ticker
     if "analysis_ticker" not in st.session_state:
         st.session_state["analysis_ticker"] = None
-
-    # Pick up ticker from query param (hero mover chip click)
-    _qp_ticker = st.query_params.get("ticker")
-    if _qp_ticker:
-        st.session_state["analysis_ticker"] = _qp_ticker
-        st.query_params.clear()
 
     report_date = meta.get("report_date", "—")
     num_positions = meta.get("total_positions", len(holdings))
