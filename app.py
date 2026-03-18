@@ -665,6 +665,46 @@ def fetch_fundamentals(tickers: list[str]) -> pd.DataFrame:
     return pd.DataFrame(rows).set_index("ticker")
 
 
+# ── Macro data ──────────────────────────────────────────────────────────────
+
+MACRO_TICKERS = ["^VIX", "^TNX", "^FVX", "CL=F", "GC=F", "DX-Y.NYB"]
+FED_FUNDS_RATE = 4.33  # Effective federal funds rate — update after FOMC decisions
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def fetch_macro_data() -> dict:
+    """Fetch macro indicators (VIX, yields, oil, gold, DXY) via yfinance."""
+    try:
+        df = yf.download(
+            MACRO_TICKERS, period="6mo", auto_adjust=True,
+            progress=False, threads=True,
+        )
+        if df.empty:
+            return {}
+
+        # yf.download with multiple tickers returns MultiIndex columns (field, ticker)
+        closes = df["Close"].ffill()
+
+        current = {}
+        changes = {}
+        for t in MACRO_TICKERS:
+            if t not in closes.columns:
+                continue
+            series = closes[t].dropna()
+            if len(series) < 2:
+                continue
+            current[t] = float(series.iloc[-1])
+            prev = float(series.iloc[-2])
+            if prev != 0:
+                changes[t] = ((current[t] - prev) / prev) * 100
+            else:
+                changes[t] = 0.0
+
+        return {"prices": closes, "current": current, "changes": changes}
+    except Exception:
+        return {}
+
+
 def compute_portfolio_metrics(table: pd.DataFrame, fundamentals: pd.DataFrame,
                               holdings: pd.DataFrame) -> dict:
     """
@@ -1052,6 +1092,74 @@ def make_fx_chart(fx_df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def make_macro_chart(dates, values, title: str, color: str = "#4f8ff7",
+                     y_format: str = ".2f", height: int = 260) -> go.Figure:
+    """Reusable 6-month line+area chart for macro indicators."""
+    y_min, y_max = values.min(), values.max()
+    y_pad = (y_max - y_min) * 0.15 or 0.5
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=dates, y=values, mode="lines",
+        line=dict(color=color, width=2),
+        fill="tonexty",
+        fillcolor=f"rgba({int(color[1:3],16)},{int(color[3:5],16)},{int(color[5:7],16)},0.08)",
+        hovertemplate=f"<b>%{{x|%b %d}}</b><br>{title}: %{{y:{y_format}}}<extra></extra>",
+    ))
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=height, margin=dict(l=0, r=0, t=10, b=0),
+        font=dict(color="#8896ab", family="Inter", size=11),
+        hovermode="x unified",
+        showlegend=False,
+        xaxis=dict(showgrid=False, zeroline=False, tickformat="%b %d",
+                   linecolor="#243044"),
+        yaxis=dict(showgrid=True, gridcolor="#1c2536", zeroline=False,
+                   tickformat=y_format, side="right",
+                   range=[y_min - y_pad, y_max + y_pad]),
+    )
+    return fig
+
+
+def make_yield_chart(dates, y10, y5) -> go.Figure:
+    """Yield curve chart: 10Y vs 5Y with spread shading."""
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=dates, y=y10, mode="lines", name="10Y",
+        line=dict(color="#4f8ff7", width=2),
+        hovertemplate="<b>%{x|%b %d}</b><br>10Y: %{y:.2f}%<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=dates, y=y5, mode="lines", name="5Y",
+        line=dict(color="#22d3ee", width=2),
+        fill="tonexty",
+        fillcolor="rgba(79, 143, 247, 0.06)",
+        hovertemplate="<b>%{x|%b %d}</b><br>5Y: %{y:.2f}%<extra></extra>",
+    ))
+
+    y_all = pd.concat([y10, y5])
+    y_min, y_max = y_all.min(), y_all.max()
+    y_pad = (y_max - y_min) * 0.15 or 0.2
+
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=260, margin=dict(l=0, r=0, t=10, b=0),
+        font=dict(color="#8896ab", family="Inter", size=11),
+        hovermode="x unified",
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center",
+                    font=dict(size=10)),
+        xaxis=dict(showgrid=False, zeroline=False, tickformat="%b %d",
+                   linecolor="#243044"),
+        yaxis=dict(showgrid=True, gridcolor="#1c2536", zeroline=False,
+                   tickformat=".2f", side="right",
+                   range=[y_min - y_pad, y_max + y_pad]),
+    )
+    return fig
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # STREAMLIT APP
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1317,7 +1425,7 @@ def main():
 
     all_models = load_all_models()
 
-    tab_names = ["Holdings"] + [m[0].get("tab_name", "Model") for m in all_models]
+    tab_names = ["Holdings", "Macro"] + [m[0].get("tab_name", "Model") for m in all_models]
     tabs = st.tabs(tab_names)
 
     # ── Holdings tab ──
@@ -1364,9 +1472,186 @@ def main():
 
         st.dataframe(styled, use_container_width=True, height=600, hide_index=True)
 
+    # ── Macro tab ──
+    with tabs[1]:
+        st.markdown(
+            '<div class="section-header">Macro Overview</div>',
+            unsafe_allow_html=True,
+        )
+        with st.spinner("Fetching macro data..."):
+            macro = fetch_macro_data()
+
+        if not macro:
+            st.caption("Macro data unavailable — try refreshing.")
+        else:
+            mc = macro.get("current", {})
+            md = macro.get("changes", {})
+            prices_df = macro.get("prices", pd.DataFrame())
+
+            # Helper for delta color
+            def _delta_html(val, fmt=".2f", suffix="%", invert=False):
+                if val is None:
+                    return '<span style="color:var(--text-muted);">—</span>'
+                c = "#2dd4a8" if (val < 0 if invert else val > 0) else "#f06060" if (val > 0 if invert else val < 0) else "var(--text-muted)"
+                arrow = "▲" if val > 0 else "▼" if val < 0 else ""
+                return f'<span style="color:{c};">{arrow} {abs(val):{fmt}}{suffix}</span>'
+
+            # Yield spread
+            y10 = mc.get("^TNX")
+            y5 = mc.get("^FVX")
+            spread = (y10 - y5) if y10 is not None and y5 is not None else None
+            spread_color = "#2dd4a8" if spread and spread > 0 else "#f06060" if spread and spread < 0 else "var(--text-muted)"
+
+            # VIX color
+            vix_val = mc.get("^VIX")
+            if vix_val is not None:
+                vix_color = "#2dd4a8" if vix_val < 20 else "#f5a623" if vix_val < 30 else "#f06060"
+            else:
+                vix_color = "var(--text-primary)"
+
+            # ── Rate & Index Cards ──
+            st.markdown(
+                f"""
+                <div class="metric-row">
+                    <div class="metric-card">
+                        <div class="label">Fed Funds Rate</div>
+                        <div class="value">{FED_FUNDS_RATE:.2f}%</div>
+                        <div class="delta" style="color:var(--text-muted);">FOMC target range</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">US 10Y Yield</div>
+                        <div class="value">{f'{y10:.2f}%' if y10 is not None else '—'}</div>
+                        <div class="delta">{_delta_html(md.get("^TNX"), ".2f", "%")}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">US 5Y Yield</div>
+                        <div class="value">{f'{y5:.2f}%' if y5 is not None else '—'}</div>
+                        <div class="delta">{_delta_html(md.get("^FVX"), ".2f", "%")}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Yield Spread (10Y-5Y)</div>
+                        <div class="value" style="color:{spread_color};">{f'{spread:+.2f}%' if spread is not None else '—'}</div>
+                        <div class="delta" style="color:var(--text-muted);">{'Normal' if spread and spread > 0 else 'Inverted' if spread and spread < 0 else '—'}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">VIX</div>
+                        <div class="value" style="color:{vix_color};">{f'{vix_val:.1f}' if vix_val is not None else '—'}</div>
+                        <div class="delta">{_delta_html(md.get("^VIX"), ".1f", "")}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">DXY (US Dollar)</div>
+                        <div class="value">{f'{mc.get("DX-Y.NYB", 0):.2f}' if "DX-Y.NYB" in mc else '—'}</div>
+                        <div class="delta">{_delta_html(md.get("DX-Y.NYB"), ".2f", "%")}</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # ── Commodity Cards ──
+            oil = mc.get("CL=F")
+            gold = mc.get("GC=F")
+            st.markdown(
+                f"""
+                <div class="metric-row">
+                    <div class="metric-card">
+                        <div class="label">WTI Crude Oil</div>
+                        <div class="value">{f'${oil:.2f}' if oil is not None else '—'}</div>
+                        <div class="delta">{_delta_html(md.get("CL=F"), ".2f", "%")}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Gold</div>
+                        <div class="value">{f'${gold:,.2f}' if gold is not None else '—'}</div>
+                        <div class="delta">{_delta_html(md.get("GC=F"), ".2f", "%")}</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            st.markdown("---")
+
+            # ── Charts ──
+            chart_row1_l, chart_row1_r = st.columns(2)
+
+            with chart_row1_l:
+                st.markdown(
+                    '<div class="section-header">Yield Curve · 6 Month</div>',
+                    unsafe_allow_html=True,
+                )
+                if (not prices_df.empty
+                        and "^TNX" in prices_df.columns
+                        and "^FVX" in prices_df.columns):
+                    s10 = prices_df["^TNX"].dropna()
+                    s5 = prices_df["^FVX"].dropna()
+                    common = s10.index.intersection(s5.index)
+                    if len(common) > 5:
+                        fig_yc = make_yield_chart(common, s10.loc[common], s5.loc[common])
+                        st.plotly_chart(fig_yc, use_container_width=True, config={"displayModeBar": False})
+                    else:
+                        st.caption("Insufficient yield data.")
+                else:
+                    st.caption("Yield data unavailable.")
+
+            with chart_row1_r:
+                st.markdown(
+                    '<div class="section-header">VIX · 6 Month</div>',
+                    unsafe_allow_html=True,
+                )
+                if not prices_df.empty and "^VIX" in prices_df.columns:
+                    vix_s = prices_df["^VIX"].dropna()
+                    if len(vix_s) > 5:
+                        fig_vix = make_macro_chart(
+                            vix_s.index, vix_s, "VIX",
+                            color="#f5a623", y_format=".1f",
+                        )
+                        st.plotly_chart(fig_vix, use_container_width=True, config={"displayModeBar": False})
+                    else:
+                        st.caption("Insufficient VIX data.")
+                else:
+                    st.caption("VIX data unavailable.")
+
+            chart_row2_l, chart_row2_r = st.columns(2)
+
+            with chart_row2_l:
+                st.markdown(
+                    '<div class="section-header">WTI Crude · 6 Month</div>',
+                    unsafe_allow_html=True,
+                )
+                if not prices_df.empty and "CL=F" in prices_df.columns:
+                    oil_s = prices_df["CL=F"].dropna()
+                    if len(oil_s) > 5:
+                        fig_oil = make_macro_chart(
+                            oil_s.index, oil_s, "WTI Crude",
+                            color="#4f8ff7", y_format="$.2f",
+                        )
+                        st.plotly_chart(fig_oil, use_container_width=True, config={"displayModeBar": False})
+                    else:
+                        st.caption("Insufficient oil data.")
+                else:
+                    st.caption("Oil data unavailable.")
+
+            with chart_row2_r:
+                st.markdown(
+                    '<div class="section-header">Gold · 6 Month</div>',
+                    unsafe_allow_html=True,
+                )
+                if not prices_df.empty and "GC=F" in prices_df.columns:
+                    gold_s = prices_df["GC=F"].dropna()
+                    if len(gold_s) > 5:
+                        fig_gold = make_macro_chart(
+                            gold_s.index, gold_s, "Gold",
+                            color="#f5a623", y_format="$,.0f",
+                        )
+                        st.plotly_chart(fig_gold, use_container_width=True, config={"displayModeBar": False})
+                    else:
+                        st.caption("Insufficient gold data.")
+                else:
+                    st.caption("Gold data unavailable.")
+
     # ── Model tabs (dynamic) ──
     for i, (model_meta, model_df) in enumerate(all_models):
-        with tabs[i + 1]:
+        with tabs[i + 2]:
             model_key = f"model_{i}"
             st.caption(
                 f"{model_meta.get('model_name', 'Model')} · "
