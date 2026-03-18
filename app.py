@@ -667,8 +667,9 @@ def fetch_fundamentals(tickers: list[str]) -> pd.DataFrame:
 
 # ── Macro data ──────────────────────────────────────────────────────────────
 
-MACRO_TICKERS = ["^VIX", "^TNX", "^FVX", "CL=F", "GC=F", "DX-Y.NYB"]
+MACRO_TICKERS = ["^VIX", "^TNX", "^FVX", "CL=F", "GC=F", "DX-Y.NYB", "ZAG.TO"]
 FED_FUNDS_RATE = 4.33  # Effective federal funds rate — update after FOMC decisions
+BOC_RATE = 2.75        # Bank of Canada overnight rate — update after BoC decisions
 
 
 @st.cache_data(ttl=120, show_spinner=False)
@@ -1516,7 +1517,7 @@ def main():
                     <div class="metric-card">
                         <div class="label">Fed Funds Rate</div>
                         <div class="value">{FED_FUNDS_RATE:.2f}%</div>
-                        <div class="delta" style="color:var(--text-muted);">FOMC target range</div>
+                        <div class="delta" style="color:var(--text-muted);">FOMC target</div>
                     </div>
                     <div class="metric-card">
                         <div class="label">US 10Y Yield</div>
@@ -1534,6 +1535,23 @@ def main():
                         <div class="delta" style="color:var(--text-muted);">{'Normal' if spread and spread > 0 else 'Inverted' if spread and spread < 0 else '—'}</div>
                     </div>
                     <div class="metric-card">
+                        <div class="label">BoC Overnight Rate</div>
+                        <div class="value">{BOC_RATE:.2f}%</div>
+                        <div class="delta" style="color:var(--text-muted);">Bank of Canada</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # ── Market & Commodity Cards ──
+            oil = mc.get("CL=F")
+            gold = mc.get("GC=F")
+            zag = mc.get("ZAG.TO")
+            st.markdown(
+                f"""
+                <div class="metric-row">
+                    <div class="metric-card">
                         <div class="label">VIX</div>
                         <div class="value" style="color:{vix_color};">{f'{vix_val:.1f}' if vix_val is not None else '—'}</div>
                         <div class="delta">{_delta_html(md.get("^VIX"), ".1f", "")}</div>
@@ -1543,17 +1561,6 @@ def main():
                         <div class="value">{f'{mc.get("DX-Y.NYB", 0):.2f}' if "DX-Y.NYB" in mc else '—'}</div>
                         <div class="delta">{_delta_html(md.get("DX-Y.NYB"), ".2f", "%")}</div>
                     </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            # ── Commodity Cards ──
-            oil = mc.get("CL=F")
-            gold = mc.get("GC=F")
-            st.markdown(
-                f"""
-                <div class="metric-row">
                     <div class="metric-card">
                         <div class="label">WTI Crude Oil</div>
                         <div class="value">{f'${oil:.2f}' if oil is not None else '—'}</div>
@@ -1563,6 +1570,11 @@ def main():
                         <div class="label">Gold</div>
                         <div class="value">{f'${gold:,.2f}' if gold is not None else '—'}</div>
                         <div class="delta">{_delta_html(md.get("GC=F"), ".2f", "%")}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">CAD Bonds (ZAG.TO)</div>
+                        <div class="value">{f'${zag:.2f}' if zag is not None else '—'}</div>
+                        <div class="delta">{_delta_html(md.get("ZAG.TO"), ".2f", "%")}</div>
                     </div>
                 </div>
                 """,
@@ -1648,6 +1660,44 @@ def main():
                         st.caption("Insufficient gold data.")
                 else:
                     st.caption("Gold data unavailable.")
+
+            chart_row3_l, chart_row3_r = st.columns(2)
+
+            with chart_row3_l:
+                st.markdown(
+                    '<div class="section-header">DXY (US Dollar Index) · 6 Month</div>',
+                    unsafe_allow_html=True,
+                )
+                if not prices_df.empty and "DX-Y.NYB" in prices_df.columns:
+                    dxy_s = prices_df["DX-Y.NYB"].dropna()
+                    if len(dxy_s) > 5:
+                        fig_dxy = make_macro_chart(
+                            dxy_s.index, dxy_s, "DXY",
+                            color="#818cf8", y_format=".2f",
+                        )
+                        st.plotly_chart(fig_dxy, use_container_width=True, config={"displayModeBar": False})
+                    else:
+                        st.caption("Insufficient DXY data.")
+                else:
+                    st.caption("DXY data unavailable.")
+
+            with chart_row3_r:
+                st.markdown(
+                    '<div class="section-header">CAD Bonds (ZAG.TO) · 6 Month</div>',
+                    unsafe_allow_html=True,
+                )
+                if not prices_df.empty and "ZAG.TO" in prices_df.columns:
+                    zag_s = prices_df["ZAG.TO"].dropna()
+                    if len(zag_s) > 5:
+                        fig_zag = make_macro_chart(
+                            zag_s.index, zag_s, "ZAG.TO",
+                            color="#2dd4a8", y_format="$.2f",
+                        )
+                        st.plotly_chart(fig_zag, use_container_width=True, config={"displayModeBar": False})
+                    else:
+                        st.caption("Insufficient ZAG data.")
+                else:
+                    st.caption("ZAG data unavailable.")
 
     # ── Model tabs (dynamic) ──
     for i, (model_meta, model_df) in enumerate(all_models):
