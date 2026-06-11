@@ -319,6 +319,92 @@ def consolidate_holdings(holdings: list[dict]) -> list[dict]:
     return result
 
 
+def _base_symbol(ticker: str) -> str:
+    """Normalize a ticker to its company base for cross-listing matching.
+
+    RY.TO → RY,  BEP-UN.TO → BEP,  CIGI → CIGI
+    """
+    base = ticker
+    for sfx in (".TO", ".V", ".CN", ".NE"):
+        if base.endswith(sfx):
+            base = base[: -len(sfx)]
+            break
+    if base.endswith("-UN"):  # trust units: BEP-UN ↔ BEP, BIP-UN ↔ BIP
+        base = base[:-3]
+    return base
+
+
+def merge_cross_listed(holdings: list[dict]) -> list[dict]:
+    """Merge cross-listed pairs (e.g. TRP + TRP.TO) into a single position.
+
+    The same company often appears twice in broker exports — once on the
+    TSX in CAD and once on a US exchange in USD. Interlisted shares are
+    fungible 1:1, so quantities can be summed.
+
+    Live prices confirm fungibility before merging: the two listings must
+    trade at the same FX-adjusted price (±5%). CDRs like AMZN.TO
+    (fractional shares) fail this parity check and stay separate.
+    If prices can't be fetched, pairs are left unmerged.
+    """
+    from collections import defaultdict
+
+    groups: dict[str, list[int]] = defaultdict(list)
+    for i, h in enumerate(holdings):
+        groups[_base_symbol(h["ticker"])].append(i)
+    pairs = {b: idxs for b, idxs in groups.items() if len(idxs) == 2}
+    if not pairs:
+        return holdings
+
+    import yfinance as yf
+
+    tickers = sorted({holdings[i]["ticker"]
+                      for idxs in pairs.values() for i in idxs})
+    try:
+        data = yf.download(tickers + ["USDCAD=X"], period="5d",
+                           auto_adjust=True, progress=False)["Close"].ffill()
+        fx = float(data["USDCAD=X"].dropna().iloc[-1])
+    except Exception:
+        return holdings  # can't verify parity — leave unmerged
+
+    def _last_price(t: str) -> float | None:
+        try:
+            s = data[t].dropna()
+            return float(s.iloc[-1]) if len(s) else None
+        except Exception:
+            return None
+
+    def _to_cad(amount: float, currency: str) -> float:
+        return amount * fx if currency == "USD" else amount
+
+    drop: set[int] = set()
+    for base, (i, j) in pairs.items():
+        a, b = holdings[i], holdings[j]
+        if a["currency"] == b["currency"]:
+            continue  # not a CAD/USD listing pair
+        pa, pb = _last_price(a["ticker"]), _last_price(b["ticker"])
+        if not pa or not pb:
+            continue
+        ratio = _to_cad(pa, a["currency"]) / _to_cad(pb, b["currency"])
+        if not (0.95 <= ratio <= 1.05):
+            continue  # not fungible 1:1 (e.g. a CDR)
+
+        # Fold the smaller line into the larger one
+        if abs(a["market_value"]) >= abs(b["market_value"]):
+            primary, secondary, drop_idx = a, b, j
+        else:
+            primary, secondary, drop_idx = b, a, i
+        sec_mv = secondary["market_value"]
+        if secondary["currency"] != primary["currency"]:
+            sec_mv = sec_mv * fx if secondary["currency"] == "USD" else sec_mv / fx
+        primary["quantity"] += secondary["quantity"]
+        primary["market_value"] = round(primary["market_value"] + sec_mv)
+        q = primary["quantity"]
+        primary["quantity"] = round(q, 4) if q != int(q) else int(q)
+        drop.add(drop_idx)
+
+    return [h for k, h in enumerate(holdings) if k not in drop]
+
+
 def _has_exchange_suffix(raw: str) -> bool:
     """Check if a broker symbol has a recognized exchange suffix."""
     return any(raw.endswith(sfx) for sfx in TICKER_SUFFIX_MAP)
@@ -521,6 +607,9 @@ def parse_holdings_file(file_bytes: bytes, filename: str) -> tuple[list[dict], s
 
     # Consolidate: merge same-ticker rows (long + short netting)
     holdings = consolidate_holdings(holdings)
+
+    # Merge cross-listed pairs (TRP + TRP.TO etc.) into one position
+    holdings = merge_cross_listed(holdings)
 
     # Remove small positions after consolidation
     holdings = [h for h in holdings if abs(h["market_value"]) >= MIN_POSITION_VALUE]
