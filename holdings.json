@@ -2,8 +2,8 @@
   "_meta": {
     "report_date": "2026-05-14",
     "report_title": "Holdings Import \u2014 2026-05-14",
-    "total_positions": 122,
-    "total_market_value": 228518230,
+    "total_positions": 115,
+    "total_market_value": 230310861,
     "notes": "Imported from Holdings_Detail_1_949TotReturnBookofBusiness_20260514 (1).xls"
   },
   "holdings": [
@@ -139,16 +139,8 @@
       "name": "TC ENERGY CORP COM",
       "ticker": "TRP.TO",
       "currency": "CAD",
-      "quantity": 46555,
-      "market_value": 4357082,
-      "sector": "Energy"
-    },
-    {
-      "name": "TC ENERGY CORP COM",
-      "ticker": "TRP",
-      "currency": "USD",
-      "quantity": 6485,
-      "market_value": 606270,
+      "quantity": 53040,
+      "market_value": 5204799,
       "sector": "Energy"
     },
     {
@@ -267,16 +259,8 @@
       "name": "WASTE CONNECTIONS INC COM",
       "ticker": "WCN.TO",
       "currency": "CAD",
-      "quantity": 9087,
-      "market_value": 1933350,
-      "sector": "Industrials"
-    },
-    {
-      "name": "WASTE CONNECTIONS INC COMPOSITE COM",
-      "ticker": "WCN",
-      "currency": "USD",
-      "quantity": 2021,
-      "market_value": 429564,
+      "quantity": 11108,
+      "market_value": 2533988,
       "sector": "Industrials"
     },
     {
@@ -371,16 +355,8 @@
       "name": "COLLIERS INTERNATIONAL GROUP INC SUB VTG SH",
       "ticker": "CIGI.TO",
       "currency": "CAD",
-      "quantity": 10929,
-      "market_value": 1406453,
-      "sector": "Consumer Staples"
-    },
-    {
-      "name": "COLLIERS INTERNATIONAL GROUP INC SUB VTG SH",
-      "ticker": "CIGI",
-      "currency": "USD",
-      "quantity": 4400,
-      "market_value": 565769,
+      "quantity": 15329,
+      "market_value": 2197539,
       "sector": "Consumer Staples"
     },
     {
@@ -627,16 +603,8 @@
       "name": "ROYAL BANK OF CANADA",
       "ticker": "RY.TO",
       "currency": "CAD",
-      "quantity": 42602,
-      "market_value": 10754023,
-      "sector": "Financials"
-    },
-    {
-      "name": "ROYAL BANK OF CANADA COMPOSITE",
-      "ticker": "RY",
-      "currency": "USD",
-      "quantity": 3050,
-      "market_value": 769255,
+      "quantity": 45652,
+      "market_value": 11829634,
       "sector": "Financials"
     },
     {
@@ -763,16 +731,8 @@
       "name": "SHOPIFY INC CL A",
       "ticker": "SHOP.TO",
       "currency": "CAD",
-      "quantity": 5455,
-      "market_value": 729279,
-      "sector": "Telecommunications"
-    },
-    {
-      "name": "SHOPIFY INC CL A",
-      "ticker": "SHOP",
-      "currency": "USD",
-      "quantity": 2629,
-      "market_value": 351393,
+      "quantity": 8084,
+      "market_value": 1220614,
       "sector": "Telecommunications"
     },
     {
@@ -819,33 +779,17 @@
       "name": "BROOKFIELD RENEW COMPOSITE PARTNERSHIP UNITS CA LISTED",
       "ticker": "BEP-UN.TO",
       "currency": "CAD",
-      "quantity": 37690,
-      "market_value": 1760123,
-      "sector": "Utilities"
-    },
-    {
-      "name": "BROOKFIELD RENEWABLE CORP NEW CL A EXCHANGEABLE SUBORDINATE VOTING SHARES",
-      "ticker": "BEPC",
-      "currency": "USD",
-      "quantity": 29341,
-      "market_value": 1472156,
+      "quantity": 44249,
+      "market_value": 2189196,
       "sector": "Utilities"
     },
     {
       "name": "BROOKFIELD RENEWABLE CORP NEW CL A EXCHANGEABLE SUBORDINATE VOTING SHARES",
       "ticker": "BEPC.TO",
       "currency": "CAD",
-      "quantity": 59959,
-      "market_value": 3010541,
+      "quantity": 89300,
+      "market_value": 5068983,
       "sector": "Other"
-    },
-    {
-      "name": "BROOKFIELD RENEWABLE PARTNERS L P",
-      "ticker": "BEP",
-      "currency": "USD",
-      "quantity": 6559,
-      "market_value": 306864,
-      "sector": "Utilities"
     },
     {
       "name": "CAPITAL POWER CORPORATION",
