@@ -24,6 +24,7 @@ import streamlit as st
 BASE_DIR = Path(__file__).resolve().parent.parent
 HOLDINGS_FILE = BASE_DIR / "holdings.json"
 MODELS_DIR = BASE_DIR / "models"
+SNAPSHOTS_DIR = BASE_DIR / "snapshots"
 
 GITHUB_REPO = "scooperzb/financial-dashboard"
 MIN_POSITION_VALUE = 100_000  # Filter out positions below $100K after consolidation
@@ -748,6 +749,13 @@ if holdings_file is not None:
             content = json.dumps(output, indent=2)
             with open(HOLDINGS_FILE, "w", encoding="utf-8") as f:
                 f.write(content)
+
+            # Archive a dated snapshot for month-over-month tracking
+            SNAPSHOTS_DIR.mkdir(exist_ok=True)
+            snap_name = f"{report_date}.json"
+            with open(SNAPSHOTS_DIR / snap_name, "w", encoding="utf-8") as f:
+                f.write(content)
+
             st.cache_data.clear()
 
             # Push to GitHub so holdings persist across Render redeploys
@@ -755,13 +763,21 @@ if holdings_file is not None:
                 "holdings.json", content,
                 f"Update holdings — {report_date} ({len(parsed)} positions)",
             )
-            if ok:
+            snap_ok, snap_msg = _push_to_github(
+                f"snapshots/{snap_name}", content,
+                f"Snapshot holdings — {report_date}",
+            )
+            if ok and snap_ok:
                 st.success(
-                    f"Saved **{len(parsed)} positions** and synced to GitHub"
+                    f"Saved **{len(parsed)} positions**, archived snapshot "
+                    f"`{snap_name}`, and synced to GitHub"
                 )
             else:
                 st.success(f"Saved **{len(parsed)} positions** locally")
-                st.warning(f"Could not sync to GitHub: {msg}")
+                if not ok:
+                    st.warning(f"Could not sync holdings to GitHub: {msg}")
+                if not snap_ok:
+                    st.warning(f"Could not sync snapshot to GitHub: {snap_msg}")
             st.balloons()
 
 st.markdown("---")

@@ -33,6 +33,7 @@ import yfinance as yf
 
 HOLDINGS_FILE = Path(__file__).parent / "holdings.json"
 MODELS_DIR = Path(__file__).parent / "models"
+SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
 FALLBACK_FX_RATE = 1.36
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -563,6 +564,28 @@ def load_all_models() -> list:
     return models
 
 
+@st.cache_data(ttl=300)
+def load_snapshots() -> list:
+    """Load all monthly holdings snapshots from snapshots/.
+
+    Returns a list of (date_str, meta, holdings_df) tuples sorted by date
+    ascending. Each snapshot is a full holdings report archived at import.
+    """
+    snaps = []
+    if not SNAPSHOTS_DIR.exists():
+        return snaps
+    for fpath in sorted(SNAPSHOTS_DIR.glob("*.json")):
+        try:
+            with open(fpath, "r", encoding="utf-8-sig") as f:
+                data = json.load(f)
+            df = pd.DataFrame(data.get("holdings", []))
+            if not df.empty:
+                snaps.append((fpath.stem, data.get("_meta", {}), df))
+        except Exception:
+            continue
+    return snaps
+
+
 @st.cache_data(ttl=120)
 def get_fx_rate() -> float:
     try:
@@ -906,6 +929,78 @@ def build_table(holdings: pd.DataFrame, prices: pd.DataFrame,
         rows.append(row)
     df = pd.DataFrame(rows)
     return df.sort_values("Value (CAD)", ascending=False).reset_index(drop=True)
+
+
+def build_snapshot_comparison(curr_df: pd.DataFrame, prev_df: pd.DataFrame,
+                              fx_rate: float) -> dict:
+    """Compare two holdings reports (current vs a prior snapshot).
+
+    Values are normalized to CAD at a single fx_rate for BOTH reports so
+    weight changes reflect position changes, not FX noise. Returns dicts of
+    new/exited positions and weight changes for continuing ones.
+    """
+    def norm(df: pd.DataFrame):
+        d = {}
+        for _, h in df.iterrows():
+            mv = h["market_value"] * (fx_rate if h["currency"] == "USD" else 1.0)
+            d[h["ticker"]] = {
+                "name": h.get("name", h["ticker"]),
+                "quantity": h["quantity"],
+                "value_cad": mv,
+                "sector": h.get("sector", "—"),
+            }
+        total = sum(v["value_cad"] for v in d.values())
+        return d, total
+
+    curr, curr_total = norm(curr_df)
+    prev, prev_total = norm(prev_df)
+
+    new_rows, exited_rows, changed_rows = [], [], []
+
+    for t in sorted(set(curr) - set(prev), key=lambda x: -curr[x]["value_cad"]):
+        c = curr[t]
+        new_rows.append({
+            "Ticker": t, "Name": c["name"], "Sector": c["sector"],
+            "Value (CAD)": c["value_cad"],
+            "Weight %": c["value_cad"] / curr_total * 100 if curr_total else 0,
+        })
+
+    for t in sorted(set(prev) - set(curr), key=lambda x: -prev[x]["value_cad"]):
+        p = prev[t]
+        exited_rows.append({
+            "Ticker": t, "Name": p["name"], "Sector": p["sector"],
+            "Value (CAD)": p["value_cad"],
+            "Weight %": p["value_cad"] / prev_total * 100 if prev_total else 0,
+        })
+
+    for t in set(curr) & set(prev):
+        c, p = curr[t], prev[t]
+        w_c = c["value_cad"] / curr_total * 100 if curr_total else 0
+        w_p = p["value_cad"] / prev_total * 100 if prev_total else 0
+        q_c, q_p = c["quantity"], p["quantity"]
+        # Trade detection: share count moved by more than 2% (reports often
+        # drift a fraction of a percent from DRIP/withdrawal activity)
+        if q_p > 0 and abs(q_c - q_p) / q_p > 0.02:
+            action = "Added" if q_c > q_p else "Trimmed"
+        else:
+            action = "—"
+        changed_rows.append({
+            "Ticker": t, "Name": c["name"],
+            "Prior Wt %": w_p, "Current Wt %": w_c, "Δ Wt (pp)": w_c - w_p,
+            "Prior Shares": q_p, "Current Shares": q_c, "Trade": action,
+        })
+
+    changed_rows.sort(key=lambda r: -abs(r["Δ Wt (pp)"]))
+
+    return {
+        "new": pd.DataFrame(new_rows),
+        "exited": pd.DataFrame(exited_rows),
+        "changed": pd.DataFrame(changed_rows),
+        "curr_total": curr_total,
+        "prev_total": prev_total,
+        "curr_count": len(curr),
+        "prev_count": len(prev),
+    }
 
 
 def build_model_comparison(model_df: pd.DataFrame,
@@ -1426,7 +1521,7 @@ def main():
 
     all_models = load_all_models()
 
-    tab_names = ["Holdings", "Macro"] + [m[0].get("tab_name", "Model") for m in all_models]
+    tab_names = ["Holdings", "Changes", "Macro"] + [m[0].get("tab_name", "Model") for m in all_models]
     tabs = st.tabs(tab_names)
 
     # ── Holdings tab ──
@@ -1473,8 +1568,144 @@ def main():
 
         st.dataframe(styled, use_container_width=True, height=600, hide_index=True)
 
-    # ── Macro tab ──
+    # ── Changes tab (month-over-month) ──
     with tabs[1]:
+        st.markdown('<div class="section-header">Month-over-Month Changes</div>',
+                    unsafe_allow_html=True)
+
+        snapshots = load_snapshots()
+        current_date = meta.get("report_date", "")
+        baselines = [(d, m, df) for d, m, df in snapshots if d < current_date]
+
+        if not baselines:
+            st.info(
+                "No prior snapshots to compare against yet. Snapshots are "
+                "archived automatically each time you upload a holdings report."
+            )
+        else:
+            base_options = [d for d, _, _ in reversed(baselines)]
+            sel_col, _sp = st.columns([1, 3])
+            with sel_col:
+                baseline_date = st.selectbox(
+                    "Compare against", base_options,
+                    format_func=lambda d: f"Report {d}",
+                    key="snapshot_baseline",
+                )
+            prev_df = next(df for d, _, df in baselines if d == baseline_date)
+
+            cmp = build_snapshot_comparison(holdings, prev_df, fx_rate)
+
+            delta = cmp["curr_total"] - cmp["prev_total"]
+            delta_pct = (delta / cmp["prev_total"] * 100) if cmp["prev_total"] else 0
+            delta_color = "var(--accent-green)" if delta >= 0 else "var(--accent-red)"
+            st.markdown(
+                f"""
+                <div class="metric-row">
+                    <div class="metric-card">
+                        <div class="label">Total Value ({current_date})</div>
+                        <div class="value">${cmp['curr_total']:,.0f}</div>
+                        <div class="delta" style="color:{delta_color};">
+                            {'▲' if delta >= 0 else '▼'} ${abs(delta):,.0f}
+                            ({delta_pct:+.2f}%) vs {baseline_date}
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Positions</div>
+                        <div class="value">{cmp['curr_count']}</div>
+                        <div class="delta" style="color:var(--text-muted);">
+                            was {cmp['prev_count']} on {baseline_date}
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">New Positions</div>
+                        <div class="value" style="color:var(--accent-green);">{len(cmp['new'])}</div>
+                        <div class="delta" style="color:var(--text-muted);">entered since {baseline_date}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Exited Positions</div>
+                        <div class="value" style="color:var(--accent-red);">{len(cmp['exited'])}</div>
+                        <div class="delta" style="color:var(--text-muted);">sold out since {baseline_date}</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                f"All values normalized to CAD at today's rate "
+                f"({fx_rate:.4f}) for both reports, so weight changes reflect "
+                f"position moves — not FX swings."
+            )
+
+            new_col, exit_col = st.columns(2)
+            money_fmt = "${:,.0f}"
+            with new_col:
+                st.markdown(
+                    '<div class="section-header" style="margin-top:1rem;">'
+                    '🟢 New Positions</div>', unsafe_allow_html=True)
+                if cmp["new"].empty:
+                    st.caption("None")
+                else:
+                    st.dataframe(
+                        cmp["new"].style.format(
+                            {"Value (CAD)": money_fmt, "Weight %": "{:.2f}%"}),
+                        use_container_width=True, hide_index=True,
+                    )
+            with exit_col:
+                st.markdown(
+                    '<div class="section-header" style="margin-top:1rem;">'
+                    '🔴 Exited Positions</div>', unsafe_allow_html=True)
+                if cmp["exited"].empty:
+                    st.caption("None")
+                else:
+                    st.dataframe(
+                        cmp["exited"].style.format(
+                            {"Value (CAD)": money_fmt, "Weight %": "{:.2f}%"}),
+                        use_container_width=True, hide_index=True,
+                    )
+
+            st.markdown(
+                '<div class="section-header" style="margin-top:1rem;">'
+                'Weight Changes — Continuing Positions</div>',
+                unsafe_allow_html=True)
+
+            changed = cmp["changed"]
+            trades_only = st.toggle(
+                "Show trades only (share count changed)", value=False,
+                key="changes_trades_only",
+            )
+            if trades_only:
+                changed = changed[changed["Trade"] != "—"]
+
+            if changed.empty:
+                st.caption("No changes to show.")
+            else:
+                def color_delta(val):
+                    if pd.isna(val) or abs(val) < 0.005:
+                        return "color: #576678"
+                    return "color: #2dd4a8" if val > 0 else "color: #f06060"
+
+                def color_trade(val):
+                    if val == "Added":
+                        return "color: #2dd4a8"
+                    if val == "Trimmed":
+                        return "color: #f06060"
+                    return "color: #576678"
+
+                st.dataframe(
+                    changed.style.format({
+                        "Prior Wt %": "{:.2f}%",
+                        "Current Wt %": "{:.2f}%",
+                        "Δ Wt (pp)": "{:+.2f}",
+                        "Prior Shares": "{:,.0f}",
+                        "Current Shares": "{:,.0f}",
+                    })
+                    .map(color_delta, subset=["Δ Wt (pp)"])
+                    .map(color_trade, subset=["Trade"]),
+                    use_container_width=True, height=500, hide_index=True,
+                )
+
+    # ── Macro tab ──
+    with tabs[2]:
         st.markdown(
             '<div class="section-header">Macro Overview</div>',
             unsafe_allow_html=True,
@@ -1701,7 +1932,7 @@ def main():
 
     # ── Model tabs (dynamic) ──
     for i, (model_meta, model_df) in enumerate(all_models):
-        with tabs[i + 2]:
+        with tabs[i + 3]:
             model_key = f"model_{i}"
             st.caption(
                 f"{model_meta.get('model_name', 'Model')} · "
