@@ -660,13 +660,20 @@ def fetch_fundamentals(tickers: list[str]) -> pd.DataFrame:
       trailingPE, forwardPE, dividendYield, beta,
       fiftyTwoWeekHigh, fiftyTwoWeekLow, marketCap, sector_yf
     """
-    rows = []
-    for ticker in tickers:
-        try:
-            info = yf.Ticker(ticker).info or {}
-        except Exception:
-            info = {}
+    from concurrent.futures import ThreadPoolExecutor
 
+    def _fetch_info(ticker: str) -> dict:
+        try:
+            return yf.Ticker(ticker).info or {}
+        except Exception:
+            return {}
+
+    # Parallel fetch — sequential .info calls take 1-3 min for ~110 tickers
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        infos = list(pool.map(_fetch_info, tickers))
+
+    rows = []
+    for ticker, info in zip(tickers, infos):
         div_yield = info.get("dividendYield")
         if div_yield is None:
             div_yield = info.get("trailingAnnualDividendYield")
@@ -857,7 +864,13 @@ def _get_sp500_change() -> tuple[str, float]:
 def query_stock_movement(ticker: str, company_name: str,
                          day_change: float, price: float,
                          sector: str = "—") -> str:
-    """Ask Claude (with web search) for the latest reason behind a stock move."""
+    """Ask Claude (with web search) for the latest reason behind a stock move.
+
+    Callers must pass ROUNDED day_change/price (see the call site) — the
+    cache is keyed on all arguments, and raw live values change every
+    price refresh, which would make the 1-hour cache useless and re-bill
+    the API + web searches for the same question.
+    """
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return "ANTHROPIC_API_KEY not configured — add it to your environment variables."
@@ -894,10 +907,10 @@ def query_stock_movement(ticker: str, company_name: str,
             f"Do not include any introductory text, thinking, or commentary before the structured response."
         )
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
+            model="claude-sonnet-5",
+            max_tokens=2048,  # adaptive thinking shares this budget on Sonnet 5
             tools=[{
-                "type": "web_search_20250305",
+                "type": "web_search_20260209",
                 "name": "web_search",
                 "max_uses": 5,
             }],
@@ -936,7 +949,9 @@ def build_table(holdings: pd.DataFrame, prices: pd.DataFrame,
         else:
             row["Price"] = None
             row["Day Change %"] = None
-            row["Value (CAD)"] = h["market_value"]
+            # No live price — fall back to reported value, converting USD
+            row["Value (CAD)"] = (h["market_value"] * fx_rate if is_usd
+                                  else h["market_value"])
         rows.append(row)
     df = pd.DataFrame(rows)
     return df.sort_values("Value (CAD)", ascending=False).reset_index(drop=True)
@@ -2301,8 +2316,10 @@ def main():
             chg_arrow = "▲" if day_chg >= 0 else "▼"
 
             with st.spinner(f"Asking Claude about {selected_ticker}..."):
+                # Round inputs so the cache key survives live price refreshes
                 analysis = query_stock_movement(
-                    selected_ticker, company, day_chg, price, sector
+                    selected_ticker, company,
+                    round(day_chg, 1), round(price), sector,
                 )
 
             st.markdown(

@@ -271,19 +271,22 @@ def _push_to_github(filepath: str, content: str, message: str) -> tuple[bool, st
         "Accept": "application/vnd.github.v3+json",
     }
 
-    # Get current SHA (required to update an existing file)
-    resp = requests.get(url, headers=headers)
-    sha = resp.json().get("sha") if resp.status_code == 200 else None
+    try:
+        # Get current SHA (required to update an existing file)
+        resp = requests.get(url, headers=headers, timeout=15)
+        sha = resp.json().get("sha") if resp.status_code == 200 else None
 
-    payload = {
-        "message": message,
-        "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
-        "branch": "main",
-    }
-    if sha:
-        payload["sha"] = sha
+        payload = {
+            "message": message,
+            "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
+            "branch": "main",
+        }
+        if sha:
+            payload["sha"] = sha
 
-    resp = requests.put(url, json=payload, headers=headers)
+        resp = requests.put(url, json=payload, headers=headers, timeout=15)
+    except requests.RequestException as e:
+        return False, f"GitHub request failed: {e}"
     if resp.status_code in (200, 201):
         return True, "Synced to GitHub"
     return False, f"GitHub API {resp.status_code}: {resp.json().get('message', '')}"
