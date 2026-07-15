@@ -1295,8 +1295,39 @@ def main():
 
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-    # ── Load everything ──
+    # ── Paint the page shell BEFORE any network call ──
+    # holdings.json is local and instant; live prices can take 10-30s on a
+    # cold start. Render a branded hero with report values immediately,
+    # then swap in the live hero once prices arrive.
     meta, holdings = load_holdings()
+    hero_slot = st.empty()
+    hero_slot.markdown(
+        f"""
+        <div class="hero">
+            <div class="hero-top">
+                <h1>Portfolio Holdings</h1>
+                <span class="hero-status">
+                    <span class="dot closed"></span> Fetching live prices…
+                </span>
+            </div>
+            <div class="hero-value">${meta.get('total_market_value', 0):,.0f}</div>
+            <div class="hero-change" style="color:var(--text-muted);">
+                report value — live pricing loading
+            </div>
+            <div class="hero-meta">
+                <span class="chip">
+                    <span class="label">As of</span> {meta.get('report_date', '—')}
+                </span>
+                <span class="chip">
+                    <span class="label">Positions</span> {meta.get('total_positions', len(holdings))}
+                </span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── Load everything ──
     fx_rate = get_fx_rate()
     all_tickers = holdings["ticker"].tolist()
 
@@ -1310,12 +1341,6 @@ def main():
     # Sidebar
     fetched = set(prices.columns)
     failed = set(all_tickers) - fetched
-    if failed:
-        st.sidebar.warning(
-            f"No data for {len(failed)} ticker(s): "
-            + ", ".join(sorted(failed)[:8])
-            + ("..." if len(failed) > 8 else "")
-        )
 
     with st.sidebar:
         st.markdown("### Portfolio Dashboard")
@@ -1330,6 +1355,14 @@ def main():
             f"Positions: {meta.get('total_positions', len(holdings))}  \n"
             f"Source: Yahoo Finance"
         )
+        if failed:
+            # Chronic for unlisted prefs — keep it quiet, not a warning box
+            st.caption(
+                f"No live quotes for {len(failed)}: "
+                + ", ".join(sorted(failed)[:6])
+                + ("…" if len(failed) > 6 else "")
+                + " (report values used)"
+            )
 
     # ── Build the master table ──
     table = build_table(holdings, prices, fx_rate)
@@ -1420,7 +1453,7 @@ def main():
 
     fx_chip_arrow = "▲" if fx_30d_chg > 0 else "▼" if fx_30d_chg < 0 else "—"
 
-    st.markdown(
+    hero_slot.markdown(
         f"""
         <div class="hero">
             <div class="hero-top">
@@ -1558,6 +1591,12 @@ def main():
         display = table[["Ticker", "Shares", "Price", "Day Change %",
                           "Value (CAD)", "Sector"]].copy()
 
+        # Company name + portfolio weight
+        name_map = holdings.set_index("ticker")["name"].to_dict()
+        display.insert(1, "Name", display["Ticker"].map(
+            lambda t: str(name_map.get(t, ""))[:34].title()))
+        display.insert(2, "Weight %", display["Value (CAD)"] / total_value * 100)
+
         all_tickers_sorted = sorted(display["Ticker"].unique())
         all_sectors_sorted = sorted(display["Sector"].dropna().unique())
         filter_col1, filter_col2 = st.columns(2)
@@ -1592,7 +1631,17 @@ def main():
             .map(color_day_change, subset=["Day Change %"])
         )
 
-        st.dataframe(styled, use_container_width=True, height=600, hide_index=True)
+        max_weight = float(display["Weight %"].max()) if not display.empty else 1.0
+        st.dataframe(
+            styled, use_container_width=True, height=600, hide_index=True,
+            column_config={
+                "Weight %": st.column_config.ProgressColumn(
+                    "Weight %", format="%.2f%%",
+                    min_value=0.0, max_value=max_weight,
+                ),
+                "Name": st.column_config.TextColumn("Name", width="medium"),
+            },
+        )
 
     # ── Changes tab (month-over-month) ──
     with tabs[1]:
@@ -2363,10 +2412,21 @@ def main():
     )
 
 
-if __name__ == "__main__":
+def _dashboard():
     try:
         main()
     except Exception as e:
         import traceback
         st.error(f"Dashboard error: {e}")
         st.code(traceback.format_exc())
+
+
+if __name__ == "__main__":
+    # st.navigation gives the sidebar proper page names and icons
+    # (the default nav shows raw filenames like "app")
+    pg = st.navigation([
+        st.Page(_dashboard, title="Portfolio", icon="📊", default=True),
+        st.Page("pages/Block_Trades.py", title="Block Trades", icon="📈"),
+        st.Page("pages/Data_Import.py", title="Data Import", icon="📤"),
+    ])
+    pg.run()
