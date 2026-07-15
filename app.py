@@ -20,6 +20,7 @@
 import json
 import logging
 import os
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -516,6 +517,32 @@ hr {
 div[data-baseweb="select"] {
     font-size: 0.85rem;
 }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+    .main .block-container {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+        padding-top: 0.75rem;
+    }
+    .hero-value { font-size: 2.1rem; }
+    .hero-meta .chip { font-size: 0.7rem; padding: 0.25rem 0.55rem; }
+    /* Metric cards: 2-up grid instead of 5 crammed in one row */
+    .metric-row { flex-wrap: wrap; }
+    .metric-card {
+        flex: 1 1 calc(50% - 0.75rem);
+        min-width: 0;
+        padding: 0.85rem 1rem;
+    }
+    .metric-card .value { font-size: 1.15rem; }
+    /* Comfortable touch targets on analyze buttons */
+    .stButton > button { min-height: 44px; }
+    /* FX popover: fit the viewport instead of fixed 480px */
+    [data-testid="stPopover"] > div {
+        min-width: min(480px, 92vw);
+    }
+    .analysis-card { padding: 1rem 1.1rem; }
+}
 </style>
 """
 
@@ -863,17 +890,19 @@ def _get_sp500_change() -> tuple[str, float]:
 @st.cache_data(ttl=3600, show_spinner=False)
 def query_stock_movement(ticker: str, company_name: str,
                          day_change: float, price: float,
-                         sector: str = "—") -> str:
+                         sector: str = "—") -> tuple:
     """Ask Claude (with web search) for the latest reason behind a stock move.
 
-    Callers must pass ROUNDED day_change/price (see the call site) — the
-    cache is keyed on all arguments, and raw live values change every
-    price refresh, which would make the 1-hour cache useless and re-bill
-    the API + web searches for the same question.
+    Returns (analysis_text, generated_unix_ts) so the UI can show cache
+    freshness. Callers must pass ROUNDED day_change/price (see the call
+    site) — the cache is keyed on all arguments, and raw live values
+    change every price refresh, which would make the 1-hour cache useless
+    and re-bill the API + web searches for the same question.
     """
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        return "ANTHROPIC_API_KEY not configured — add it to your environment variables."
+        return ("ANTHROPIC_API_KEY not configured — add it to your "
+                "environment variables.", time.time())
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
@@ -919,11 +948,12 @@ def query_stock_movement(ticker: str, company_name: str,
         # Extract text blocks from the response (web search returns mixed content)
         parts = []
         for block in message.content:
-            if hasattr(block, "text"):
+            if block.type == "text":
                 parts.append(block.text)
-        return " ".join(parts).strip() if parts else "No analysis available."
+        text = " ".join(parts).strip() if parts else "No analysis available."
+        return (text, time.time())
     except Exception as e:
-        return f"Error querying Claude: {e}"
+        return (f"Error querying Claude: {e}", time.time())
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1453,6 +1483,26 @@ def main():
 
     fx_chip_arrow = "▲" if fx_30d_chg > 0 else "▼" if fx_30d_chg < 0 else "—"
 
+    # ── Month-over-month chip (points at the Changes tab) ──
+    changes_chip = ""
+    _snaps = load_snapshots()
+    _priors = [(d, df) for d, _m, df in _snaps if d < report_date]
+    if _priors:
+        _base_date, _prev_df = _priors[-1]
+        _curr_set = set(holdings["ticker"])
+        _prev_set = set(_prev_df["ticker"])
+        _n_new = len(_curr_set - _prev_set)
+        _n_exit = len(_prev_set - _curr_set)
+        changes_chip = (
+            f'<span class="chip">'
+            f'<span class="label">vs {_base_date}</span>&nbsp;'
+            f'<span style="color:#2dd4a8; font-weight:700;">{_n_new} new</span>'
+            f'&nbsp;·&nbsp;'
+            f'<span style="color:#f06060; font-weight:700;">{_n_exit} exited</span>'
+            f'&nbsp;<span style="color:var(--text-muted);">→ Changes tab</span>'
+            f'</span>'
+        )
+
     hero_slot.markdown(
         f"""
         <div class="hero">
@@ -1483,6 +1533,7 @@ def main():
                     <span class="label">FX</span> USD/CAD {fx_rate:.4f}
                     &nbsp;<span style="color:{fx_wind_color}; font-weight:700;">{fx_chip_arrow} {fx_wind_label}</span>
                 </span>
+                {changes_chip}
             </div>
             <div class="movers-strip">
                 {gainer_chips}{loser_chips}
@@ -2366,10 +2417,18 @@ def main():
 
             with st.spinner(f"Asking Claude about {selected_ticker}..."):
                 # Round inputs so the cache key survives live price refreshes
-                analysis = query_stock_movement(
+                analysis, generated_ts = query_stock_movement(
                     selected_ticker, company,
                     round(day_chg, 1), round(price), sector,
                 )
+
+            age_min = (time.time() - generated_ts) / 60
+            if age_min < 2:
+                fresh_label = "just now"
+            elif age_min < 60:
+                fresh_label = f"cached · {int(age_min)}m ago"
+            else:
+                fresh_label = f"cached · {int(age_min // 60)}h {int(age_min % 60)}m ago"
 
             st.markdown(
                 f"""
@@ -2381,6 +2440,9 @@ def main():
                         </span>
                         <span style="color:var(--text-muted); font-size:0.8rem;">
                             {company} · ${price:,.2f}
+                        </span>
+                        <span style="color:var(--text-muted); font-size:0.7rem; margin-left:auto;">
+                            {fresh_label}
                         </span>
                     </div>
                     <div class="analysis-body">
