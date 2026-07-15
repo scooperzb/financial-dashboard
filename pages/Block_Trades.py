@@ -24,7 +24,7 @@ import yfinance as yf
 
 BLOCK_TRADES_FILE = Path(__file__).resolve().parent.parent / "block_trades.json"
 HOLDINGS_FILE = Path(__file__).resolve().parent.parent / "holdings.json"
-FALLBACK_FX_RATE = 1.36
+FALLBACK_FX_RATE = 1.40  # last-resort only; live rate normally fetched
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
@@ -342,10 +342,16 @@ def load_block_trades() -> tuple[dict, pd.DataFrame, pd.DataFrame]:
 
 @st.cache_data(ttl=120)
 def get_fx_rate() -> float:
+    # yf.download, not Ticker().history() — the latter gets rate-limited
+    # from cloud-host IPs (fails on Render, returning the stale fallback)
     try:
-        hist = yf.Ticker("USDCAD=X").history(period="1d")
-        if not hist.empty:
-            return float(hist["Close"].iloc[-1])
+        data = yf.download("USDCAD=X", period="5d", progress=False,
+                           auto_adjust=True)
+        if not data.empty:
+            close = data["Close"]
+            if isinstance(close, pd.DataFrame):
+                close = close.iloc[:, 0]
+            return float(close.dropna().iloc[-1])
     except Exception:
         pass
     return FALLBACK_FX_RATE

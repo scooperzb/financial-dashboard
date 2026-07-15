@@ -34,7 +34,7 @@ import yfinance as yf
 HOLDINGS_FILE = Path(__file__).parent / "holdings.json"
 MODELS_DIR = Path(__file__).parent / "models"
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
-FALLBACK_FX_RATE = 1.36
+FALLBACK_FX_RATE = 1.40  # last-resort only; live rate normally fetched
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
@@ -588,10 +588,17 @@ def load_snapshots() -> list:
 
 @st.cache_data(ttl=120)
 def get_fx_rate() -> float:
+    # yf.download, not Ticker().history() — the latter uses Yahoo's
+    # crumb/cookie endpoint which gets rate-limited from cloud-host IPs
+    # (fails on Render, silently returning the stale fallback)
     try:
-        hist = yf.Ticker("USDCAD=X").history(period="1d")
-        if not hist.empty:
-            return float(hist["Close"].iloc[-1])
+        data = yf.download("USDCAD=X", period="5d", progress=False,
+                           auto_adjust=True)
+        if not data.empty:
+            close = data["Close"]
+            if isinstance(close, pd.DataFrame):
+                close = close.iloc[:, 0]
+            return float(close.dropna().iloc[-1])
     except Exception:
         pass
     return FALLBACK_FX_RATE
@@ -601,9 +608,13 @@ def get_fx_rate() -> float:
 def fetch_fx_history(period: str = "30d") -> pd.DataFrame:
     """Fetch historical USD/CAD exchange rates for the FX popover chart."""
     try:
-        hist = yf.Ticker("USDCAD=X").history(period=period)
-        if not hist.empty:
-            return hist[["Close"]].dropna()
+        data = yf.download("USDCAD=X", period=period, progress=False,
+                           auto_adjust=True)
+        if not data.empty:
+            close = data["Close"]
+            if isinstance(close, pd.DataFrame):
+                close = close.iloc[:, 0]
+            return close.dropna().to_frame(name="Close")
     except Exception:
         pass
     return pd.DataFrame()
