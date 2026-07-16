@@ -7,10 +7,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app files
-COPY app.py holdings.json ./
+COPY app.py holdings.json block_trades.json ./
 COPY .streamlit/ .streamlit/
 COPY models/ models/
 COPY pages/ pages/
+COPY snapshots/ snapshots/
 
 EXPOSE 8501
 

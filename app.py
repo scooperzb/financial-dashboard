@@ -40,6 +40,17 @@ FALLBACK_FX_RATE = 1.40  # last-resort only; live rate normally fetched
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 
+def html_block(s: str) -> str:
+    """Strip whitespace-only lines from an HTML fragment before st.markdown.
+
+    Markdown treats a blank line inside an indented HTML block as the end
+    of the block — everything after renders as a literal code block. A
+    conditional f-string interpolation that resolves to '' leaves exactly
+    such a line, which is how the hero banner broke on Render.
+    """
+    return "\n".join(line for line in s.splitlines() if line.strip())
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # CUSTOM THEME CSS
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1336,8 +1347,7 @@ def main():
     hero_slot = st.empty()
     if not st.session_state.get("_shell_painted"):
         st.session_state["_shell_painted"] = True
-        hero_slot.markdown(
-        f"""
+        hero_slot.markdown(html_block(f"""
         <div class="hero">
             <div class="hero-top">
                 <h1>Portfolio Holdings</h1>
@@ -1358,20 +1368,28 @@ def main():
                 </span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """), unsafe_allow_html=True)
 
     # ── Load everything ──
-    fx_rate = get_fx_rate()
     all_tickers = holdings["ticker"].tolist()
 
     with st.spinner("Fetching live prices..."):
-        prices = fetch_prices(all_tickers)
+        # USDCAD=X rides in the equity batch: standalone FX downloads get
+        # rate-limited on Render's IP while the batch endpoint works, which
+        # left the dashboard silently on the hard-coded fallback rate
+        prices = fetch_prices(all_tickers + ["USDCAD=X"])
 
     if prices.empty:
         st.error("Could not fetch market data. Check your internet connection.")
         st.stop()
+
+    fx_rate = None
+    if "USDCAD=X" in prices.columns:
+        _fx_series = prices["USDCAD=X"].dropna()
+        if len(_fx_series):
+            fx_rate = float(_fx_series.iloc[-1])
+    if fx_rate is None:
+        fx_rate = get_fx_rate()
 
     # Sidebar
     fetched = set(prices.columns)
@@ -1508,8 +1526,7 @@ def main():
             f'</span>'
         )
 
-    hero_slot.markdown(
-        f"""
+    hero_slot.markdown(html_block(f"""
         <div class="hero">
             <div class="hero-top">
                 <h1>Portfolio Holdings</h1>
@@ -1544,9 +1561,7 @@ def main():
                 {gainer_chips}{loser_chips}
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """), unsafe_allow_html=True)
 
     # ── FX Popover with chart + portfolio impact ──
     with st.popover(f"💱 USD/CAD {fx_rate:.4f}", use_container_width=False):
@@ -2270,8 +2285,7 @@ def main():
         pe_cov = metrics.get("pe_coverage", 0)
 
         # Row 1: Main metrics
-        st.markdown(
-            f"""
+        st.markdown(html_block(f"""
             <div class="metric-row">
                 <div class="metric-card">
                     <div class="label">Weighted P/E (Trailing)</div>
@@ -2320,9 +2334,7 @@ def main():
                     </div>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            """), unsafe_allow_html=True)
     else:
         st.info("Could not compute portfolio metrics.")
 
@@ -2435,8 +2447,7 @@ def main():
             else:
                 fresh_label = f"cached · {int(age_min // 60)}h {int(age_min % 60)}m ago"
 
-            st.markdown(
-                f"""
+            st.markdown(html_block(f"""
                 <div class="analysis-card">
                     <div class="analysis-header">
                         <span class="ticker-badge"
@@ -2461,9 +2472,7 @@ def main():
                         if (el) el.scrollIntoView({{behavior: 'smooth', block: 'center'}});
                     }})();
                 </script>
-                """,
-                unsafe_allow_html=True,
-            )
+                """), unsafe_allow_html=True)
 
     _analysis_fragment()
 
