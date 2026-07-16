@@ -1328,10 +1328,15 @@ def main():
     # ── Paint the page shell BEFORE any network call ──
     # holdings.json is local and instant; live prices can take 10-30s on a
     # cold start. Render a branded hero with report values immediately,
-    # then swap in the live hero once prices arrive.
+    # then swap in the live hero once prices arrive. ONLY on the first
+    # script run of the session — on reruns (button clicks etc.) prices
+    # are cached and painting the shell again makes the banner flash
+    # stale numbers for a frame.
     meta, holdings = load_holdings()
     hero_slot = st.empty()
-    hero_slot.markdown(
+    if not st.session_state.get("_shell_painted"):
+        st.session_state["_shell_painted"] = True
+        hero_slot.markdown(
         f"""
         <div class="hero">
             <div class="hero-top">
